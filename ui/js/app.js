@@ -1,5 +1,5 @@
 /**
- * YTA ABDO EMPIRE - UI Application
+ * YTA Empire 2 - UI Application
  * FIXED: Playhead - freely draggable, can go to 0, doesn't disappear when panning
  */
 
@@ -530,7 +530,7 @@ async function init() {
     // Initialize WebGL2 Compositor Engine
     initCompositor();
 
-    console.log('🎬 YTA ABDO EMPIRE UI Ready');
+    console.log('🎬 YTA Empire 2 UI Ready');
 }
 
 function setupEventListeners() {
@@ -5302,13 +5302,35 @@ function setCompositorMode(active) {
 
 /**
  * Load the current video plan into the compositor engine.
+ * Builds a synthetic plan from the PROCESSED state (state.scenes + state.motionGraphics)
+ * so the compositor sees the exact same data as the timeline preview.
  * Uses getCachedMediaUrl as the URL resolver.
  */
 async function loadPlanIntoCompositor() {
     if (!state.compositor || !state.videoPlan) return;
 
     try {
-        await state.compositor.loadPlan(state.videoPlan, async (sceneIndex, ext) => {
+        // Build a plan from the processed state so compositor matches the timeline exactly.
+        // state.videoPlan has the RAW plan; state.scenes has the processed/carved/reordered scenes.
+        const compositorPlan = {
+            fps: state.videoPlan.fps || 30,
+            totalDuration: state.totalDuration || state.videoPlan.totalDuration,
+            scriptContext: state.videoPlan.scriptContext || {},
+            // Use processed scenes (with corrected endTimes, trackIds, and indices)
+            scenes: state.scenes.filter(s => !s.isMGScene).map((s, i) => ({
+                ...s,
+                // Ensure index is set (use original scene index for media file lookup)
+                index: s.index !== undefined ? s.index : i,
+            })),
+            // Fullscreen MG scenes
+            mgScenes: state.scenes.filter(s => s.isMGScene).map(s => ({ ...s })),
+            // Overlay motion graphics
+            motionGraphics: (state.motionGraphics || []).filter(mg => !mg.disabled),
+            // Transitions
+            transitions: state.videoPlan.transitions || [],
+        };
+
+        await state.compositor.loadPlan(compositorPlan, async (sceneIndex, ext) => {
             return getCachedMediaUrl(sceneIndex, ext);
         });
     } catch (e) {
@@ -5335,12 +5357,6 @@ async function renderVideoWebGL2() {
     const pipeline = new ExportPipeline(state.compositor);
     pipeline.onProgress((data) => {
         updateProgress(data.percent, `Rendering frame ${data.currentFrame}/${data.totalFrames} (${data.fps} fps)`);
-        if (mainWindow) {
-            mainWindow.webContents.send('render-progress', {
-                percent: data.percent,
-                message: `Frame ${data.currentFrame}/${data.totalFrames}`,
-            });
-        }
     });
 
     const result = await pipeline.start({

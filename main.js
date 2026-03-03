@@ -1,5 +1,5 @@
 /**
- * YTA ABDO EMPIRE - Electron Main Process
+ * YTA Empire 2 - Electron Main Process
  * This file creates the desktop app window and bridges the UI to Node.js
  */
 
@@ -317,7 +317,7 @@ function createStartupWindow() {
             fullscreenable: false,
             autoHideMenuBar: true,
             backgroundColor: '#0a0a0a',
-            title: 'YTA ABDO EMPIRE — Start',
+            title: 'YTA Empire 2 — Start',
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
@@ -474,7 +474,7 @@ function createWindow() {
 
     // Set window title with project name
     if (PROJECT_NAME) {
-        mainWindow.setTitle(`YTA ABDO EMPIRE — ${PROJECT_NAME}`);
+        mainWindow.setTitle(`YTA Empire 2 — ${PROJECT_NAME}`);
     }
 
     // Load the UI
@@ -526,10 +526,10 @@ function createWindow() {
                     // Call directly instead of through IPC
                     try {
                         const desktopDir = path.join(require('os').homedir(), 'Desktop');
-                        const shortcutPath = path.join(desktopDir, 'YTA ABDO EMPIRE.lnk');
+                        const shortcutPath = path.join(desktopDir, 'YTA Empire 2.lnk');
                         const electronExe = process.execPath;
                         const icon = getShortcutIconPath();
-                        const ps = `$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('${shortcutPath.replace(/'/g, "''")}'); $sc.TargetPath = '${electronExe.replace(/'/g, "''")}'; $sc.Arguments = '""${APP_ROOT.replace(/'/g, "''")}""'; $sc.WorkingDirectory = '${APP_ROOT.replace(/'/g, "''")}'; $sc.IconLocation = '${icon.replace(/'/g, "''")}'; $sc.Description = 'YTA ABDO EMPIRE'; $sc.Save();`;
+                        const ps = `$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('${shortcutPath.replace(/'/g, "''")}'); $sc.TargetPath = '${electronExe.replace(/'/g, "''")}'; $sc.Arguments = '""${APP_ROOT.replace(/'/g, "''")}""'; $sc.WorkingDirectory = '${APP_ROOT.replace(/'/g, "''")}'; $sc.IconLocation = '${icon.replace(/'/g, "''")}'; $sc.Description = 'YTA Empire 2'; $sc.Save();`;
                         execSync(`powershell -Command "${ps.replace(/"/g, '\\"')}"`, { stdio: 'ignore' });
                         dialog.showMessageBox(mainWindow, { title: 'Shortcut Created', message: 'Desktop shortcut created successfully!', type: 'info' });
                     } catch (e) {
@@ -551,7 +551,7 @@ function createWindow() {
                     }
                 }},
                 { type: 'separator' },
-                { label: 'About', click: () => dialog.showMessageBox(mainWindow, { title: 'YTA ABDO EMPIRE', message: 'AI-powered video generator', type: 'info' }) }
+                { label: 'About', click: () => dialog.showMessageBox(mainWindow, { title: 'YTA Empire 2', message: 'AI-powered video generator', type: 'info' }) }
             ]
         }
     ]);
@@ -566,13 +566,13 @@ function createWindow() {
         mainWindow = null;
     });
 
-    console.log('🎬 YTA ABDO EMPIRE started');
+    console.log('🎬 YTA Empire 2 started');
 }
 
 // ========================================
 // App Lifecycle
 // ========================================
-app.setAppUserModelId('YTA ABDO EMPIRE');
+app.setAppUserModelId('YTA Empire 2');
 
 app.whenReady().then(async () => {
     // If app launched without an explicit project argument, ask user at startup.
@@ -2328,7 +2328,7 @@ ipcMain.handle('create-desktop-shortcut', async () => {
     if (process.platform !== 'win32') return { success: false, error: 'Windows only' };
     try {
         const desktopDir = path.join(require('os').homedir(), 'Desktop');
-        const shortcutPath = path.join(desktopDir, 'YTA ABDO EMPIRE.lnk');
+        const shortcutPath = path.join(desktopDir, 'YTA Empire 2.lnk');
         const electronExe = process.execPath;
         const icon = getShortcutIconPath();
 
@@ -2340,7 +2340,7 @@ $sc.TargetPath = '${electronExe.replace(/'/g, "''")}';
 $sc.Arguments = '"${APP_ROOT.replace(/'/g, "''")}"';
 $sc.WorkingDirectory = '${APP_ROOT.replace(/'/g, "''")}';
 $sc.IconLocation = '${icon.replace(/'/g, "''")}';
-$sc.Description = 'YTA ABDO EMPIRE - AI Video Generator';
+$sc.Description = 'YTA Empire 2 - AI Video Generator';
 $sc.Save();
         `.trim();
 
@@ -2378,7 +2378,7 @@ function registerFvpFileAssociation() {
             '@="FacelessVideoProject"',
             '',
             '[HKEY_CURRENT_USER\\Software\\Classes\\FacelessVideoProject]',
-            '@="YTA ABDO EMPIRE Project"',
+            '@="YTA Empire 2 Project"',
             '',
             '[HKEY_CURRENT_USER\\Software\\Classes\\FacelessVideoProject\\DefaultIcon]',
             `@="${regEsc(iconValue)}"`,
@@ -2416,11 +2416,11 @@ if (process.platform === 'win32' && !fs.existsSync(fvpRegisteredFlag)) {
         registerFvpFileAssociation();
         // Auto-create desktop shortcut
         const desktopDir = path.join(require('os').homedir(), 'Desktop');
-        const shortcutPath = path.join(desktopDir, 'YTA ABDO EMPIRE.lnk');
+        const shortcutPath = path.join(desktopDir, 'YTA Empire 2.lnk');
         if (!fs.existsSync(shortcutPath)) {
             const electronExe = process.execPath;
             const icon = getShortcutIconPath();
-            const ps = `$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('${shortcutPath.replace(/'/g, "''")}'); $sc.TargetPath = '${electronExe.replace(/'/g, "''")}'; $sc.Arguments = '""${APP_ROOT.replace(/'/g, "''")}""'; $sc.WorkingDirectory = '${APP_ROOT.replace(/'/g, "''")}'; $sc.IconLocation = '${icon.replace(/'/g, "''")}'; $sc.Description = 'YTA ABDO EMPIRE'; $sc.Save();`;
+            const ps = `$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('${shortcutPath.replace(/'/g, "''")}'); $sc.TargetPath = '${electronExe.replace(/'/g, "''")}'; $sc.Arguments = '""${APP_ROOT.replace(/'/g, "''")}""'; $sc.WorkingDirectory = '${APP_ROOT.replace(/'/g, "''")}'; $sc.IconLocation = '${icon.replace(/'/g, "''")}'; $sc.Description = 'YTA Empire 2'; $sc.Save();`;
             execSync(`powershell -Command "${ps.replace(/"/g, '\\"')}"`, { stdio: 'ignore' });
             console.log('✅ Desktop shortcut created');
         }

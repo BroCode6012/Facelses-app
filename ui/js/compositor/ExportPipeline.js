@@ -78,11 +78,20 @@ class ExportPipeline {
 
                 // Seek all active videos to this frame
                 const activeScenes = this.compositor.sceneGraph.getActiveScenesAtFrame(frame);
+                let didSeek = false;
                 for (const { scene } of activeScenes) {
                     if (scene.isMGScene || scene.mediaType === 'motion-graphic') continue;
                     const localFrame = frame - scene._startFrame;
                     const mediaOffsetFrames = Math.round((scene.mediaOffset || 0) * fps);
                     await this.compositor.seekVideoToFrame(scene.index, localFrame + mediaOffsetFrames);
+                    didSeek = true;
+                }
+
+                // CRITICAL: Yield to browser rendering pipeline so video frames
+                // are actually decoded and available for texImage2D upload.
+                // Without this, the browser never paints and video textures stay stale.
+                if (didSeek) {
+                    await new Promise(resolve => requestAnimationFrame(resolve));
                 }
 
                 // Render the frame
@@ -140,6 +149,8 @@ class ExportPipeline {
         } finally {
             this._running = false;
             this.compositor._exporting = false;
+            // Reset all video elements to beginning so preview isn't stuck at last export frame
+            this.compositor._resetVideosForPreview();
         }
     }
 

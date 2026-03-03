@@ -1,5 +1,5 @@
 /**
- * YTA ABDO EMPIRE - Electron Preload Script
+ * YTA Empire 2 - Electron Preload Script
  * This safely exposes Electron APIs to the renderer (UI)
  */
 

@@ -155,59 +155,109 @@ class Compositor {
      * Create hidden <video>/<img> elements for media scenes and start loading.
      */
     async _preloadMedia(scenes) {
-        // Release old elements
+        // Release old elements (remove from DOM too)
         for (const key of Object.keys(this._videoElements)) {
-            const vid = this._videoElements[key];
-            vid.pause();
-            vid.src = '';
+            const el = this._videoElements[key];
+            if (el instanceof HTMLVideoElement) {
+                el.pause();
+                el.src = '';
+                el.load();
+                if (el.parentNode) el.parentNode.removeChild(el);
+            }
         }
         this._videoElements = {};
         this._mediaUrls = {};
 
-        const loadPromises = [];
+        // First pass: resolve all URLs in parallel
+        const urlMap = {};
+        const urlPromises = scenes.map(async (scene) => {
+            const idx = scene.index;
+            if (idx == null) return;
+            const ext = scene.mediaExtension || '.mp4';
+            const url = await this._resolveUrl(idx, ext);
+            if (url) urlMap[idx] = { url, ext };
+        });
+        await Promise.all(urlPromises);
+
+        // Second pass: create elements and wait for load
+        // Load images in parallel (lightweight), but batch videos to avoid
+        // overwhelming browser with too many simultaneous video loads
+        const imagePromises = [];
+        const videoScenes = [];
 
         for (const scene of scenes) {
             const idx = scene.index;
-            if (idx == null || this._videoElements[idx]) continue;
-
-            const ext = scene.mediaExtension || '.mp4';
+            if (idx == null || !urlMap[idx]) continue;
+            const { url, ext } = urlMap[idx];
             const isImage = scene.mediaType === 'image' || /\.(jpg|jpeg|png|webp|gif)$/i.test(ext);
 
+            this._mediaUrls[idx] = url;
+
             if (isImage) {
-                // Create an <img> element
                 const img = new Image();
                 img.crossOrigin = 'anonymous';
-                const p = this._resolveUrl(idx, ext).then(url => {
-                    if (url) {
-                        img.src = url;
-                        this._mediaUrls[idx] = url;
-                    }
-                });
-                loadPromises.push(p);
-                this._videoElements[idx] = img; // Store in same map, type-check at render time
+                this._videoElements[idx] = img;
+                imagePromises.push(new Promise(resolve => {
+                    img.onload = resolve;
+                    img.onerror = () => { console.warn(`[Compositor] Failed to load image for scene ${idx}`); resolve(); };
+                    img.src = url;
+                    setTimeout(resolve, 5000);
+                }));
             } else {
-                // Create a hidden <video> element
-                const video = document.createElement('video');
-                video.muted = true;
-                video.preload = 'auto';
-                video.playsInline = true;
-                video.crossOrigin = 'anonymous';
-                // Prevent the video from being visible/audible
-                video.style.display = 'none';
-                document.body.appendChild(video);
-
-                const p = this._resolveUrl(idx, ext).then(url => {
-                    if (url) {
-                        video.src = url;
-                        this._mediaUrls[idx] = url;
-                    }
-                });
-                loadPromises.push(p);
-                this._videoElements[idx] = video;
+                videoScenes.push({ scene, url, idx });
             }
         }
 
-        await Promise.all(loadPromises);
+        // Create all video elements upfront so they start loading in parallel
+        for (const { scene, url, idx } of videoScenes) {
+            const video = document.createElement('video');
+            video.muted = true;
+            video.preload = 'auto';
+            video.playsInline = true;
+            video.crossOrigin = 'anonymous';
+            video.style.display = 'none';
+            document.body.appendChild(video);
+            this._videoElements[idx] = video;
+            video.src = url;
+        }
+
+        // Wait for all videos to reach canplaythrough (fully buffered for local files)
+        const videoPromises = videoScenes.map(({ idx }) => {
+            const video = this._videoElements[idx];
+            return new Promise(resolve => {
+                if (video.readyState >= 3) { resolve(); return; } // HAVE_FUTURE_DATA or better
+                let resolved = false;
+                const done = () => {
+                    if (resolved) return;
+                    resolved = true;
+                    video.removeEventListener('canplaythrough', onReady);
+                    video.removeEventListener('loadeddata', onFallback);
+                    video.removeEventListener('error', onError);
+                    clearTimeout(timer);
+                    resolve();
+                };
+                const onReady = () => done();
+                const onFallback = () => {
+                    // canplaythrough might not fire for some codecs, accept loadeddata after a delay
+                    setTimeout(done, 500);
+                };
+                const onError = () => {
+                    console.warn(`[Compositor] Failed to load video for scene ${idx}`);
+                    done();
+                };
+                video.addEventListener('canplaythrough', onReady);
+                video.addEventListener('loadeddata', onFallback);
+                video.addEventListener('error', onError);
+                const timer = setTimeout(() => {
+                    console.warn(`[Compositor] Timeout loading video for scene ${idx} (readyState=${video.readyState})`);
+                    done();
+                }, 20000);
+            });
+        });
+
+        // Wait for all images and videos
+        await Promise.all([...imagePromises, ...videoPromises]);
+        console.log(`[Compositor] Preloaded ${imagePromises.length} images and ${videoScenes.length} videos`);
     }
 
     async _resolveUrl(sceneIndex, ext) {
@@ -388,17 +438,19 @@ class Compositor {
 
             if (fitMode === 'cover') {
                 if (srcAspect > dstAspect) {
-                    // Source wider than dest: scale Y to fill, X crops
-                    scaleX = dstAspect / srcAspect;
+                    // Source wider than dest: zoom in on X so Y fills, crops sides
+                    scaleX = srcAspect / dstAspect;
                 } else {
-                    // Source taller than dest: scale X to fill, Y crops
-                    scaleY = srcAspect / dstAspect;
+                    // Source taller than dest: zoom in on Y so X fills, crops top/bottom
+                    scaleY = dstAspect / srcAspect;
                 }
             } else if (fitMode === 'contain') {
                 if (srcAspect > dstAspect) {
-                    scaleY = srcAspect / dstAspect;
+                    // Source wider: letterbox top/bottom
+                    scaleY = dstAspect / srcAspect;
                 } else {
-                    scaleX = dstAspect / srcAspect;
+                    // Source taller: pillarbox sides
+                    scaleX = srcAspect / dstAspect;
                 }
             }
 
@@ -549,24 +601,85 @@ class Compositor {
 
     /**
      * Seek a video element to a specific frame (for export mode).
-     * Returns a promise that resolves when the seek is complete.
+     * Returns a promise that resolves when the seek is complete and frame is decoded.
      */
     async seekVideoToFrame(sceneIndex, frame) {
         const vid = this._videoElements[sceneIndex];
-        if (!(vid instanceof HTMLVideoElement) || vid.readyState < 2) return;
+        if (!(vid instanceof HTMLVideoElement)) return;
+
+        // If video hasn't loaded yet, wait for it (don't skip — causes black frames)
+        if (vid.readyState < 2) {
+            await new Promise((resolve) => {
+                let resolved = false;
+                const done = () => {
+                    if (resolved) return;
+                    resolved = true;
+                    vid.removeEventListener('loadeddata', onLoaded);
+                    vid.removeEventListener('error', onError);
+                    clearTimeout(timer);
+                    resolve();
+                };
+                const onLoaded = () => done();
+                const onError = () => {
+                    console.warn(`[Compositor] Video for scene ${sceneIndex} failed to load`);
+                    done();
+                };
+                vid.addEventListener('loadeddata', onLoaded);
+                vid.addEventListener('error', onError);
+                // If already loaded by now (race), resolve immediately
+                if (vid.readyState >= 2) { done(); return; }
+                const timer = setTimeout(() => {
+                    console.warn(`[Compositor] Timeout waiting for video scene ${sceneIndex} to load`);
+                    done();
+                }, 15000);
+            });
+            if (vid.readyState < 2) return; // Truly failed to load
+        }
 
         const targetTime = frame / this.fps;
-        vid.currentTime = targetTime;
 
+        // Skip seek if already at this exact time
+        if (Math.abs(vid.currentTime - targetTime) < 0.001) return;
+
+        // Register seeked listener BEFORE setting currentTime to avoid race condition
         await new Promise((resolve) => {
-            const onSeeked = () => {
+            let resolved = false;
+            const done = () => {
+                if (resolved) return;
+                resolved = true;
                 vid.removeEventListener('seeked', onSeeked);
+                clearTimeout(timer);
                 resolve();
             };
+            const onSeeked = () => done();
             vid.addEventListener('seeked', onSeeked);
+            // Set currentTime AFTER listener is registered
+            vid.currentTime = targetTime;
             // Timeout fallback in case seeked never fires
-            setTimeout(resolve, 200);
+            const timer = setTimeout(done, 500);
         });
+    }
+
+    /**
+     * Reset video elements after export so preview works again.
+     * Seeks all videos to time 0 and ensures they are ready for playback.
+     */
+    _resetVideosForPreview() {
+        for (const key of Object.keys(this._videoElements)) {
+            const el = this._videoElements[key];
+            if (el instanceof HTMLVideoElement) {
+                el.pause();
+                el.currentTime = 0;
+            }
+        }
+        // Clear texture cache so next renderFrame uploads fresh frames
+        if (this.textureManager) {
+            for (const scene of (this.sceneGraph ? this.sceneGraph.scenes : [])) {
+                if (!scene.isMGScene && scene.mediaType !== 'motion-graphic') {
+                    this.textureManager.release(`scene-${scene.index}`);
+                }
+            }
+        }
     }
 
     // ========================================================================
