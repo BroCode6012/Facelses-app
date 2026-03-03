@@ -1855,6 +1855,10 @@ ipcMain.handle('start-webgl-export', async (event, options) => {
             width, height, fps,
             stderr: ffmpegStderr,
             framesWritten: 0,
+            bytesWritten: 0,
+            lastLogTime: Date.now(),
+            lastLogFrames: 0,
+            expectedFrameSize: width * height * 4,
         };
 
         return { success: true, videoFile, outputFile };
@@ -1879,6 +1883,66 @@ ipcMain.handle('export-frame', async (event, frameBuffer) => {
             await new Promise(resolve => exp.proc.stdin.once('drain', resolve));
         }
         return { success: true };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('export-frames-batch', async (event, batchPayload) => {
+    const exp = _webglExport;
+    if (!exp || !exp.proc || exp.proc.killed) {
+        return { success: false, error: 'No active export process' };
+    }
+
+    try {
+        const { frames } = batchPayload; // Array of { frameIndex, buffer }
+        if (!frames || !frames.length) {
+            return { success: true, written: 0 };
+        }
+
+        // Detect out-of-order (renderer guarantees order, but log if violated)
+        for (let i = 1; i < frames.length; i++) {
+            if (frames[i].frameIndex <= frames[i - 1].frameIndex) {
+                console.warn(`[WebGL Export] Out-of-order batch: frame ${frames[i].frameIndex} after ${frames[i - 1].frameIndex}`);
+            }
+        }
+
+        // Concatenate all frame buffers into a single Buffer for one stdin.write()
+        const totalSize = frames.length * exp.expectedFrameSize;
+        const combined = Buffer.allocUnsafe(totalSize);
+        let offset = 0;
+        for (const entry of frames) {
+            const src = Buffer.from(entry.buffer);
+            if (src.length !== exp.expectedFrameSize) {
+                console.warn(`[WebGL Export] Frame ${entry.frameIndex} size mismatch: ${src.length} vs expected ${exp.expectedFrameSize}`);
+            }
+            src.copy(combined, offset);
+            offset += src.length;
+        }
+
+        // Single write for the whole batch
+        const canWrite = exp.proc.stdin.write(combined);
+        exp.framesWritten += frames.length;
+        exp.bytesWritten += offset;
+
+        // Backpressure: wait for FFmpeg to drain before returning
+        if (!canWrite) {
+            await new Promise(resolve => exp.proc.stdin.once('drain', resolve));
+        }
+
+        // Periodic logging (~every second)
+        const now = Date.now();
+        if (now - exp.lastLogTime >= 1000) {
+            const elapsed = (now - exp.lastLogTime) / 1000;
+            const recentFrames = exp.framesWritten - exp.lastLogFrames;
+            const fps = (recentFrames / elapsed).toFixed(1);
+            const totalMB = (exp.bytesWritten / (1024 * 1024)).toFixed(0);
+            console.log(`[WebGL Export] ${exp.framesWritten}/${exp.totalFrames} frames | ${fps} fps recent | ${totalMB} MB written`);
+            exp.lastLogTime = now;
+            exp.lastLogFrames = exp.framesWritten;
+        }
+
+        return { success: true, written: frames.length };
     } catch (err) {
         return { success: false, error: err.message };
     }

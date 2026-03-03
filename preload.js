@@ -185,6 +185,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return ipcRenderer.invoke('export-frame', frameBuffer);
     },
 
+    // Send a batch of raw RGBA frame buffers to FFmpeg (reduces IPC round-trips)
+    sendExportFramesBatch: (batchPayload) => {
+        return ipcRenderer.invoke('export-frames-batch', batchPayload);
+    },
+
     // Finish export (close FFmpeg stdin, mux audio, return output path)
     finishWebGLExport: () => {
         return ipcRenderer.invoke('finish-webgl-export');

@@ -3075,6 +3075,10 @@ async function cancelProcess() {
     elements.btnCancel.disabled = true;
     elements.btnCancel.textContent = 'Cancelling...';
     try {
+        // Cancel WebGL2 export pipeline if active
+        if (state.exportPipeline) {
+            state.exportPipeline.cancel();
+        }
         const result = await window.electronAPI?.cancelProcess();
         if (result?.success) {
             stopTimer();
@@ -5365,6 +5369,7 @@ async function renderVideoWebGL2() {
     const fps = state.videoPlan.fps || 30;
 
     const pipeline = new ExportPipeline(state.compositor);
+    state.exportPipeline = pipeline; // Store so cancelProcess() can reach it
     pipeline.onProgress((data) => {
         const mode = useLegacy ? 'Legacy' : 'Optimized';
         updateProgress(data.percent, `[${mode}] Rendering frame ${data.currentFrame}/${data.totalFrames} (${data.fps} fps)`);
@@ -5377,14 +5382,17 @@ async function renderVideoWebGL2() {
     const hashes = await pipeline.validate(testFrames);
     console.log('[WebGL2 Export] Validation hashes:', JSON.stringify(hashes));
 
-    const result = await pipeline.start({
-        width: 1920,
-        height: 1080,
-        fps,
-        legacy: useLegacy,
-    });
-
-    return result;
+    try {
+        const result = await pipeline.start({
+            width: 1920,
+            height: 1080,
+            fps,
+            legacy: useLegacy,
+        });
+        return result;
+    } finally {
+        state.exportPipeline = null;
+    }
 }
 
 async function renderVideo() {
@@ -5508,11 +5516,13 @@ async function showFinalVideo(videoPath) {
         cleanupVideoHandlers();
 
         const url = await window.electronAPI.getFileUrl(videoPath);
-        if (url) {
+        if (url && elements.previewVideo && elements.previewPlaceholder) {
             elements.previewPlaceholder.classList.add('hidden');
             elements.previewVideo.classList.remove('hidden');
             elements.previewVideo.src = url;
             elements.previewVideo.play();
+        } else if (url) {
+            console.warn('[showFinalVideo] Preview elements not found, skipping video display');
         }
         showToast('Video rendered!', 'success');
     } catch (e) {

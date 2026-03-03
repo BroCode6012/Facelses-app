@@ -56,6 +56,13 @@ class Compositor {
         // - Guarded by this._exporting in _getSceneTexture (never checked in preview)
         // - Cleared to null by _resetVideosForPreview() and ExportPipeline finally block
         this._exportFrameSources = null;
+
+        // PBO async readback (export-only, initialized by initPBOs)
+        this._pbos = null;           // Array of WebGLBuffer
+        this._pboCount = 4;
+        this._pboWriteIndex = 0;     // next PBO to write into
+        this._pboFrameBytes = 0;     // w * h * 4
+        this._pboReady = false;
     }
 
     // ========================================================================
@@ -123,6 +130,7 @@ class Compositor {
         this._videoElements = {};
         this._mediaUrls = {};
 
+        this.destroyPBOs();
         this.gl = null;
         this._initialized = false;
         console.log('[Compositor] Destroyed');
@@ -558,6 +566,187 @@ class Compositor {
         }
 
         return this._flipBuf;
+    }
+
+    /**
+     * Read pixels directly into a caller-provided Uint8Array (RGBA, top-down).
+     * Avoids allocating a new buffer per frame — ideal for ring-buffer export.
+     *
+     * Reads GL framebuffer into `target`, then flips rows in-place using a
+     * single-row temp buffer (~7.5 KB for 1920px width).
+     *
+     * @param {Uint8Array} target - Pre-allocated buffer, must be width*height*4 bytes
+     */
+    readPixelsInto(target) {
+        const gl = this.gl;
+        const w = this.width;
+        const h = this.height;
+        const rowSize = w * 4;
+
+        // GPU → CPU: one copy directly into the caller's buffer
+        gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, target);
+
+        // In-place vertical flip using a single-row temp buffer
+        if (!this._rowBuf || this._rowBuf.length !== rowSize) {
+            this._rowBuf = new Uint8Array(rowSize);
+        }
+        const halfH = h >>> 1;
+        for (let y = 0; y < halfH; y++) {
+            const top = y * rowSize;
+            const bot = (h - 1 - y) * rowSize;
+            // swap top row ↔ bottom row via temp
+            this._rowBuf.set(target.subarray(top, top + rowSize));
+            target.set(target.subarray(bot, bot + rowSize), top);
+            target.set(this._rowBuf, bot);
+        }
+    }
+
+    // ========================================================================
+    // PBO ASYNC READBACK (export-only)
+    // ========================================================================
+
+    /**
+     * Create 3 PBOs for async readback. Call once at export start.
+     * @param {number} width
+     * @param {number} height
+     * @returns {boolean} true if PBOs created successfully
+     */
+    initPBOs(width, height) {
+        const gl = this.gl;
+        if (!gl || !(gl instanceof WebGL2RenderingContext)) {
+            console.warn('[WebGL Export] initPBOs FAILED: not a WebGL2 context');
+            return false;
+        }
+
+        const frameBytes = width * height * 4;
+        this._pboFrameBytes = frameBytes;
+        this._pboCount = 4;
+        this._pboWriteIndex = 0;
+        this._pbos = [];
+
+        try {
+            for (let i = 0; i < this._pboCount; i++) {
+                const pbo = gl.createBuffer();
+                if (!pbo) throw new Error(`Failed to create PBO ${i}`);
+                gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+                gl.bufferData(gl.PIXEL_PACK_BUFFER, frameBytes, gl.STREAM_READ);
+                this._pbos.push(pbo);
+            }
+            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+            this._pboReady = true;
+            console.log(`[WebGL Export] initPBOs SUCCESS: ${this._pboCount} PBOs, bytes=${frameBytes}`);
+            return true;
+        } catch (err) {
+            console.warn(`[WebGL Export] initPBOs FAILED: ${err.message}`);
+            this.destroyPBOs();
+            return false;
+        }
+    }
+
+    /**
+     * Initiate async readPixels into the current PBO (non-blocking).
+     * The GPU begins DMA transfer in the background.
+     * @returns {number} PBO index written to, or -1 if not ready
+     */
+    readPixelsIntoPBO() {
+        if (!this._pboReady) return -1;
+        const gl = this.gl;
+        const idx = this._pboWriteIndex;
+
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this._pbos[idx]);
+        // When PIXEL_PACK_BUFFER is bound, last param is byte offset into PBO (not a pointer)
+        gl.readPixels(0, 0, this.width, this.height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+        this._pboWriteIndex = (idx + 1) % this._pboCount;
+        return idx;
+    }
+
+    /**
+     * Read back data from a PBO into a CPU buffer + vertical flip.
+     * Blocks until DMA is complete (should already be done if 1+ frame has passed).
+     * @param {number} pboIndex - Which PBO to read from
+     * @param {Uint8Array} target - Pre-allocated buffer from pool
+     */
+    readBackPBO(pboIndex, target) {
+        const gl = this.gl;
+        const w = this.width;
+        const h = this.height;
+        const rowSize = w * 4;
+
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this._pbos[pboIndex]);
+        gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, target, 0, this._pboFrameBytes);
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+        // In-place vertical flip — identical to readPixelsInto
+        if (!this._rowBuf || this._rowBuf.length !== rowSize) {
+            this._rowBuf = new Uint8Array(rowSize);
+        }
+        const halfH = h >>> 1;
+        for (let y = 0; y < halfH; y++) {
+            const top = y * rowSize;
+            const bot = (h - 1 - y) * rowSize;
+            this._rowBuf.set(target.subarray(top, top + rowSize));
+            target.set(target.subarray(bot, bot + rowSize), top);
+            target.set(this._rowBuf, bot);
+        }
+    }
+
+    /**
+     * Create a GPU fence after readPixelsIntoPBO to track DMA completion.
+     * Call gl.flush() to ensure the fence is submitted to the GPU.
+     * @returns {WebGLSync|null} Sync object, or null if not supported
+     */
+    createFence() {
+        const gl = this.gl;
+        if (!gl || !gl.fenceSync) return null;
+        const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+        gl.flush();
+        return sync;
+    }
+
+    /**
+     * Wait for a GPU fence to be signaled, yielding to the event loop
+     * between polls (no busy-wait). Deletes the sync object when done.
+     * @param {WebGLSync} sync - Fence from createFence()
+     * @param {number} [timeoutMs=1500] - Max wait before giving up
+     * @returns {Promise<boolean>} true if fence was satisfied, false if timed out
+     */
+    async awaitFence(sync, timeoutMs) {
+        if (!sync) return true;
+        const gl = this.gl;
+        if (!gl) return true; // context gone, sync is orphaned — proceed to readback
+        const deadline = performance.now() + (timeoutMs || 1500);
+
+        while (performance.now() < deadline) {
+            const status = gl.clientWaitSync(sync, gl.SYNC_FLUSH_COMMANDS_BIT, 0);
+            if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) {
+                gl.deleteSync(sync);
+                return true;
+            }
+            // Yield to event loop — let GPU finish DMA without blocking
+            await new Promise(r => setTimeout(r, 0));
+        }
+
+        // Timed out — delete sync and proceed (getBufferSubData will stall if needed)
+        console.warn('[Compositor] Fence timed out, proceeding with stall');
+        gl.deleteSync(sync);
+        return false;
+    }
+
+    /**
+     * Delete all PBO buffers. Called at export end or on error.
+     */
+    destroyPBOs() {
+        if (this._pbos && this.gl) {
+            for (const pbo of this._pbos) {
+                if (pbo) this.gl.deleteBuffer(pbo);
+            }
+        }
+        this._pbos = null;
+        this._pboReady = false;
+        this._pboWriteIndex = 0;
+        this._pboFrameBytes = 0;
     }
 
     /**
