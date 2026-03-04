@@ -203,7 +203,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Remove listeners (cleanup)
     removeAllListeners: (channel) => {
         ipcRenderer.removeAllListeners(channel);
-    }
+    },
+
+    // ========================================
+    // V2 GPU-Native Export
+    // ========================================
+    v2Probe: () => ipcRenderer.invoke('v2-probe'),
+    // Target management
+    v2CreateTargets: (opts) => ipcRenderer.invoke('v2-create-targets', opts),
+    v2BeginFrame: (idx) => ipcRenderer.invoke('v2-begin-frame', idx),
+    v2EndFrame: (idx) => ipcRenderer.invoke('v2-end-frame', idx),
+    v2DestroyTargets: () => ipcRenderer.invoke('v2-destroy-targets'),
+    // Encoder
+    v2InitEncoder: (opts) => ipcRenderer.invoke('v2-init-encoder', opts),
+    v2EncodeFrame: (opts) => ipcRenderer.invoke('v2-encode-frame', opts),
+    v2FlushEncoder: () => ipcRenderer.invoke('v2-flush-encoder'),
+    v2CloseEncoder: () => ipcRenderer.invoke('v2-close-encoder'),
+
+    // ========================================
+    // Native D3D11 + NVENC Export
+    // ========================================
+    nativeExportProbe: () => ipcRenderer.invoke('native-export-probe'),
+    nativeExportStart: (opts) => ipcRenderer.invoke('native-export-start', opts),
+    nativeExportCancel: () => ipcRenderer.invoke('native-export-cancel'),
 });
 
 console.log('✅ Electron preload script loaded');

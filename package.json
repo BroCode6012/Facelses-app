@@ -9,6 +9,7 @@
     "render": "npx remotion render src/remotion/Root.jsx FacelessVideo output/video.mp4",
     "all": "node src/build-video.js && npx remotion render src/remotion/Root.jsx FacelessVideo output/video.mp4",
     "start": "electron .",
+    "start:v2": "set EXPORT_V2=1&& electron .",
     "dev": "electron . --dev"
   },
   "devDependencies": {

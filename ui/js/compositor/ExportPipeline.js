@@ -73,6 +73,20 @@ class ExportPipeline {
             return { success: false, error: 'No frames to export (empty timeline)' };
         }
 
+        // V2 GPU-native export probe — if available, use zero-readback path
+        if (!(options && options._skipV2) && typeof window.electronAPI.v2Probe === 'function') {
+            try {
+                const v2 = await window.electronAPI.v2Probe();
+                if (v2 && v2.ok) {
+                    console.log('[ExportPipeline] V2 GPU-native export available — using V2 path');
+                    return this._runV2Export(options);
+                }
+                console.log(`[ExportPipeline] V2 unavailable (${v2 && v2.reason || 'unknown'}), using legacy`);
+            } catch (e) {
+                console.log(`[ExportPipeline] V2 probe failed: ${e.message}, using legacy`);
+            }
+        }
+
         const legacy = !!(options && options.legacy);
 
         this._running = true;
@@ -737,6 +751,121 @@ class ExportPipeline {
         }
 
         batch.length = 0;
+    }
+
+    /**
+     * V2 GPU-native export — readPixels + V2 FFmpeg encoder.
+     *
+     * NOTE: Shared D3D11 texture redirect does NOT work — renderer WebGL
+     * uses a GPU-thread EGL context that is inaccessible from main/renderer JS.
+     * eglMakeCurrent on either thread doesn't affect the GPU thread's context.
+     * (Proven by test-v2-compositor.js Phase B + Phase C)
+     *
+     * Current V2 path uses readPixels (same as legacy) but routes pixel data
+     * through the V2 encoder IPC (v2InitEncoder → v2EncodeFrame → v2FlushEncoder).
+     * V2 encoder writes raw RGBA to FFmpeg stdin with NVENC when available.
+     *
+     * TODO: Phase 3 NVENC — encode from D3D11 texture for true zero-readback.
+     *       Requires either ANGLE D3D11 device sharing or WebCodecs VideoEncoder.
+     */
+    async _runV2Export(options) {
+        const width = (options && options.width) || this.compositor.width;
+        const height = (options && options.height) || this.compositor.height;
+        const fps = (options && options.fps) || this.compositor.fps;
+        const totalFrames = this.compositor.totalFrames;
+
+        this._running = true;
+        this._cancelled = false;
+        this.compositor._exporting = true;
+
+        console.log(`[V2 Export] Starting: ${totalFrames} frames, ${width}x${height} @ ${fps}fps (readPixels path)`);
+        const startTime = performance.now();
+
+        try {
+            // 1. Spawn FFmpeg with RGBA rawvideo input
+            const encoder = await window.electronAPI.v2InitEncoder({
+                width, height, fps, totalFrames,
+                pixelFormat: 'rgba',
+            });
+            if (!encoder || !encoder.ok) {
+                console.warn(`[V2 Export] initEncoder failed: ${encoder && encoder.reason}, falling back to legacy`);
+                this._running = false;
+                this.compositor._exporting = false;
+                return this.start(Object.assign({}, options, { _skipV2: true }));
+            }
+            console.log(`[V2 Export] FFmpeg spawned → ${encoder.videoFile}`);
+
+            // 2. Pause videos, prepare for seeking
+            this.compositor.pauseVideos();
+
+            // 3. Allocate readPixels buffer
+            const frameBytes = width * height * 4;
+            const pixelBuf = new Uint8Array(frameBytes);
+
+            // 4. Frame loop
+            let lastProgressTime = 0;
+
+            for (let frame = 0; frame < totalFrames; frame++) {
+                if (this._cancelled) throw new Error('Export cancelled');
+
+                // Seek active videos to this frame
+                const activeScenes = this.compositor.sceneGraph.getActiveScenesAtFrame(frame);
+                let didSeek = false;
+                for (const { scene } of activeScenes) {
+                    if (scene.isMGScene || scene.mediaType === 'motion-graphic') continue;
+                    const localFrame = frame - scene._startFrame;
+                    const mediaOffsetFrames = Math.round((scene.mediaOffset || 0) * fps);
+                    await this.compositor.seekVideoToFrame(scene.index, localFrame + mediaOffsetFrames);
+                    didSeek = true;
+                }
+
+                // Yield for video frame decode
+                if (didSeek) {
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+                }
+
+                // Render the frame
+                this.compositor.renderFrame(frame);
+
+                // readPixels → RGBA buffer
+                this.compositor.readPixelsInto(pixelBuf);
+
+                // Send to main process → FFmpeg stdin
+                const enc = await window.electronAPI.v2EncodeFrame({
+                    frameBuffer: pixelBuf.buffer,
+                    frameIndex: frame,
+                });
+
+                if (!enc || !enc.ok) {
+                    throw new Error(`v2EncodeFrame failed at frame ${frame}: ${enc && enc.error}`);
+                }
+
+                // Progress
+                this._reportProgress(frame, totalFrames, startTime, lastProgressTime, (t) => { lastProgressTime = t; });
+            }
+
+            // 5. Flush encoder — close FFmpeg, mux audio
+            const flushResult = await window.electronAPI.v2FlushEncoder();
+            if (!flushResult || !flushResult.ok) {
+                throw new Error(flushResult?.error || 'FFmpeg failed to produce output');
+            }
+
+            const totalElapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+            const avgFps = (totalFrames / ((performance.now() - startTime) / 1000)).toFixed(1);
+            console.log(`[V2 Export] Complete in ${totalElapsed}s (${avgFps} fps): ${flushResult.outputPath}`);
+
+            return { success: true, outputPath: flushResult.outputPath };
+
+        } catch (err) {
+            console.error('[V2 Export] Failed:', err.message);
+            try { await window.electronAPI.v2FlushEncoder(); } catch (_) {}
+            return { success: false, error: err.message };
+
+        } finally {
+            this._running = false;
+            this.compositor._exporting = false;
+            this.compositor._resetVideosForPreview();
+        }
     }
 
     /**

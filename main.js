@@ -570,6 +570,26 @@ function createWindow() {
 }
 
 // ========================================
+// V2 GPU-Native Export: colocate GPU thread with main process
+// Required for EGL/ANGLE D3D11 device access from native addon.
+// Enable with EXPORT_V2=1 environment variable.
+// ========================================
+// --in-process-gpu moves GPU thread into main process so native addon can
+// access ANGLE's EGL display for D3D11 shared texture interop.
+// --disable-gpu-compositing prevents blank window by using software UI compositing
+// while keeping GPU available for WebGL rendering.
+// Disable with EXPORT_V2=0 if it causes problems.
+if (process.env.EXPORT_V2 !== '0') {
+    app.commandLine.appendSwitch('in-process-gpu');
+    app.commandLine.appendSwitch('disable-gpu-compositing');
+    app.commandLine.appendSwitch('disable-gpu-sandbox');
+    app.commandLine.appendSwitch('no-sandbox');
+    console.log('[V2] --in-process-gpu + --disable-gpu-compositing ENABLED');
+} else {
+    console.log('[V2] --in-process-gpu DISABLED (EXPORT_V2=0)');
+}
+
+// ========================================
 // App Lifecycle
 // ========================================
 app.setAppUserModelId('YTA Empire 2');
@@ -619,6 +639,24 @@ app.whenReady().then(async () => {
     }
 
     createWindow();
+
+    // Auto-probe V2 on startup to log GPU capabilities
+    if (_gpuExportAddon && process.env.EXPORT_V2 !== '0') {
+        try {
+            const probe = _gpuExportAddon.probeAngleD3D11();
+            if (probe.ok) {
+                console.log('[V2] GPU Probe SUCCESS:');
+                console.log('  Renderer:', probe.details?.renderer);
+                console.log('  Adapter:', probe.details?.adapterDescription);
+                console.log('  LUID:', probe.details?.adapterLuid);
+                console.log('  EGL Extensions:', probe.details?.eglExtensions?.length, 'found');
+            } else {
+                console.log(`[V2] GPU Probe: ${probe.reason} — ${probe.error || ''}`);
+            }
+        } catch (e) {
+            console.log('[V2] GPU Probe error:', e.message);
+        }
+    }
 });
 
 app.on('window-all-closed', () => {
@@ -2076,6 +2114,371 @@ async function _webglMuxAudio(exp) {
         });
     });
 }
+
+// ========================================
+// V2 GPU-Native Export — IPC Handlers
+// ========================================
+// Reason codes for V2 fallback
+const V2_REASONS = {
+    DISABLED_FLAG: 'V2_DISABLED_FLAG',
+    NOT_IMPLEMENTED: 'V2_NOT_IMPLEMENTED',
+    ANGLE_NOT_D3D11: 'ANGLE_NOT_D3D11',
+    EGL_EXT_MISSING: 'EGL_EXT_MISSING',
+    PBUFFER_CREATE_FAIL: 'PBUFFER_CREATE_FAIL',
+    NVENC_INIT_FAIL: 'NVENC_INIT_FAIL',
+    ENCODE_RUNTIME_FAIL: 'ENCODE_RUNTIME_FAIL',
+};
+
+// Try to load native addon (Phase 1+ builds it)
+let _gpuExportAddon = null;
+try {
+    _gpuExportAddon = require('./src/native/gpu-export/build/Release/gpu_export.node');
+    console.log('[V2] Native addon loaded');
+} catch (_) {
+    // Expected until Phase 1 is built — silent fallback
+}
+
+ipcMain.handle('v2-probe', async () => {
+    if (process.env.EXPORT_V2 === '0') {
+        console.log('[V2] Probe: DISABLED by EXPORT_V2=0');
+        return { ok: false, reason: V2_REASONS.DISABLED_FLAG };
+    }
+    if (!_gpuExportAddon) {
+        console.log('[V2] Probe: addon not loaded (V2_NOT_IMPLEMENTED)');
+        return { ok: false, reason: V2_REASONS.NOT_IMPLEMENTED };
+    }
+    try {
+        const result = _gpuExportAddon.probeAngleD3D11();
+        if (result.ok) {
+            console.log('[V2] Probe SUCCESS:', JSON.stringify(result.details, null, 2));
+        } else {
+            console.log(`[V2] Probe FAILED: ${result.reason} — ${result.error || 'no details'}`);
+        }
+        return result;
+    } catch (err) {
+        console.error('[V2] Probe EXCEPTION:', err.message);
+        return { ok: false, reason: V2_REASONS.ANGLE_NOT_D3D11, error: err.message };
+    }
+});
+
+// V2 Target management — D3D11 shared textures + EGL pbuffer surfaces
+ipcMain.handle('v2-create-targets', async (event, opts) => {
+    if (!_gpuExportAddon) return { ok: false, reason: 'addon not loaded' };
+    try {
+        const { width, height, count } = opts;
+        const n = count || 3;
+        const texResult = _gpuExportAddon.createSharedTextures(width, height, n);
+        if (!texResult.ok) {
+            console.error('[V2] createSharedTextures failed');
+            return { ok: false, reason: 'createSharedTextures failed' };
+        }
+        const pbufResult = _gpuExportAddon.createPbufferSurfaces(n);
+        if (!pbufResult.ok) {
+            console.error('[V2] createPbufferSurfaces failed');
+            _gpuExportAddon.destroySharedTextures();
+            return { ok: false, reason: 'createPbufferSurfaces failed' };
+        }
+        console.log(`[V2] Created ${n} targets (${width}x${height})`);
+        return { ok: true, count: n, width, height };
+    } catch (err) {
+        console.error('[V2] createTargets error:', err.message);
+        return { ok: false, reason: err.message };
+    }
+});
+
+ipcMain.handle('v2-begin-frame', async (event, targetIndex) => {
+    if (!_gpuExportAddon) return false;
+    return _gpuExportAddon.makePbufferCurrent(targetIndex);
+});
+
+ipcMain.handle('v2-end-frame', async (event, targetIndex) => {
+    if (!_gpuExportAddon) return false;
+    return _gpuExportAddon.restoreDefaultSurface();
+});
+
+ipcMain.handle('v2-destroy-targets', async () => {
+    if (!_gpuExportAddon) return;
+    try {
+        _gpuExportAddon.destroyPbufferSurfaces();
+        _gpuExportAddon.destroySharedTextures();
+        console.log('[V2] Destroyed all targets');
+    } catch (err) {
+        console.error('[V2] destroyTargets error:', err.message);
+    }
+});
+
+// V2 Encoder — FFmpeg rawvideo input (RGBA from readPixels or BGRA from D3D readback)
+ipcMain.handle('v2-init-encoder', async (event, opts) => {
+    try {
+        const { width, height, fps, totalFrames, pixelFormat } = opts;
+        const fmt = pixelFormat || 'rgba';
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        const videoFile = path.join(TEMP_PATH, `v2-video-${timestamp}.mp4`);
+        const outputFile = path.join(OUTPUT_PATH, `video-${timestamp}.mp4`);
+
+        if (!fs.existsSync(OUTPUT_PATH)) fs.mkdirSync(OUTPUT_PATH, { recursive: true });
+        if (!fs.existsSync(TEMP_PATH)) fs.mkdirSync(TEMP_PATH, { recursive: true });
+
+        const useGpu = await probeNvencForWebGL();
+        const encArgs = useGpu
+            ? ['-c:v', 'h264_nvenc', '-preset', 'p4', '-b:v', '18M', '-maxrate:v', '24M', '-bufsize:v', '48M']
+            : ['-c:v', 'libx264', '-preset', 'medium', '-crf', '22'];
+
+        console.log(`[V2 Export] Starting: ${width}x${height} @ ${fps}fps, ${totalFrames} frames, format: ${fmt}, encoder: ${useGpu ? 'NVENC' : 'libx264'}`);
+
+        const ffmpegProc = spawn(WEBGL_FFMPEG_PATH, [
+            '-y',
+            '-f', 'rawvideo',
+            '-pixel_format', fmt,
+            '-video_size', `${width}x${height}`,
+            '-framerate', String(fps),
+            '-i', 'pipe:0',
+            ...encArgs,
+            '-pix_fmt', 'yuv420p',
+            '-an',
+            videoFile
+        ], { stdio: ['pipe', 'pipe', 'pipe'] });
+
+        let ffmpegStderr = '';
+        ffmpegProc.stderr.on('data', (data) => {
+            ffmpegStderr += data.toString();
+        });
+
+        _webglExport = {
+            proc: ffmpegProc,
+            videoFile,
+            outputFile,
+            totalFrames,
+            width, height, fps,
+            stderr: ffmpegStderr,
+            framesWritten: 0,
+            bytesWritten: 0,
+            lastLogTime: Date.now(),
+            lastLogFrames: 0,
+            expectedFrameSize: width * height * 4,
+            isV2: true,
+        };
+
+        return { ok: true, videoFile, outputFile };
+    } catch (err) {
+        console.error('[V2 Export] init error:', err.message);
+        return { ok: false, reason: err.message };
+    }
+});
+
+// V2 Encode frame — accepts raw pixel buffer from renderer OR D3D11 readback
+// opts.frameBuffer: ArrayBuffer from readPixels (RGBA) — used when shared texture redirect not available
+// opts.targetIndex: D3D11 readback from shared texture — used when renderer→shared texture works
+ipcMain.handle('v2-encode-frame', async (event, opts) => {
+    const exp = _webglExport;
+    if (!exp || !exp.proc || exp.proc.killed) {
+        return { ok: false, error: 'No active export process' };
+    }
+
+    try {
+        let buf;
+        if (opts.frameBuffer) {
+            // Raw pixel data from renderer readPixels
+            buf = Buffer.from(opts.frameBuffer);
+        } else if (opts.targetIndex !== undefined && _gpuExportAddon) {
+            // D3D11 readback from shared texture
+            buf = _gpuExportAddon.readTextureToBuffer(opts.targetIndex);
+            if (!buf) {
+                return { ok: false, error: `readTextureToBuffer(${opts.targetIndex}) returned null` };
+            }
+        } else {
+            return { ok: false, error: 'No frame data: provide frameBuffer or targetIndex' };
+        }
+
+        // Debug: log center pixel of first few frames
+        if (exp.framesWritten < 3) {
+            const cx = Math.floor(exp.width / 2), cy = Math.floor(exp.height / 2);
+            const off = (cy * exp.width + cx) * 4;
+            console.log(`[V2 Export] Frame ${opts.frameIndex || exp.framesWritten} center RGBA=(${buf[off]},${buf[off+1]},${buf[off+2]},${buf[off+3]})`);
+        }
+
+        const canWrite = exp.proc.stdin.write(buf);
+        exp.framesWritten++;
+        exp.bytesWritten += buf.length;
+
+        if (!canWrite) {
+            await new Promise(resolve => exp.proc.stdin.once('drain', resolve));
+        }
+
+        // Periodic logging
+        const now = Date.now();
+        if (now - exp.lastLogTime >= 1000) {
+            const elapsed = (now - exp.lastLogTime) / 1000;
+            const recentFrames = exp.framesWritten - exp.lastLogFrames;
+            const currentFps = (recentFrames / elapsed).toFixed(1);
+            const totalMB = (exp.bytesWritten / (1024 * 1024)).toFixed(0);
+            console.log(`[V2 Export] ${exp.framesWritten}/${exp.totalFrames} frames | ${currentFps} fps | ${totalMB} MB`);
+            exp.lastLogTime = now;
+            exp.lastLogFrames = exp.framesWritten;
+        }
+
+        return { ok: true };
+    } catch (err) {
+        return { ok: false, error: err.message };
+    }
+});
+
+// V2 Flush — close FFmpeg stdin, wait for exit, mux audio
+ipcMain.handle('v2-flush-encoder', async () => {
+    const exp = _webglExport;
+    if (!exp || !exp.proc) {
+        return { ok: false, error: 'No active export process' };
+    }
+
+    try {
+        exp.proc.stdin.end();
+
+        const exitCode = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                try { exp.proc.kill('SIGTERM'); } catch (_) {}
+                reject(new Error('FFmpeg timeout'));
+            }, 120000);
+
+            exp.proc.on('close', (code) => {
+                clearTimeout(timeout);
+                resolve(code);
+            });
+            exp.proc.on('error', (err) => {
+                clearTimeout(timeout);
+                reject(err);
+            });
+        });
+
+        if (exitCode !== 0) {
+            throw new Error(`FFmpeg exited with code ${exitCode}`);
+        }
+
+        console.log(`[V2 Export] Video encoded: ${exp.videoFile} (${exp.framesWritten} frames)`);
+
+        const finalOutput = await _webglMuxAudio(exp);
+
+        _webglExport = null;
+        return { ok: true, outputPath: finalOutput };
+    } catch (err) {
+        console.error('[V2 Export] flush error:', err.message);
+        _webglExport = null;
+        return { ok: false, error: err.message };
+    }
+});
+
+// V2 Close — destroy targets + cleanup
+ipcMain.handle('v2-close-encoder', async () => {
+    if (_gpuExportAddon) {
+        try {
+            _gpuExportAddon.destroyPbufferSurfaces();
+            _gpuExportAddon.destroySharedTextures();
+            console.log('[V2] Encoder closed, targets destroyed');
+        } catch (err) {
+            console.error('[V2] close error:', err.message);
+        }
+    }
+    return { ok: true };
+});
+
+// ========================================
+// Native D3D11 + NVENC Export Engine
+// ========================================
+let _nativeExporterAddon = null;
+try {
+    _nativeExporterAddon = require('./src/native/native-exporter/build/Release/native_exporter.node');
+    console.log('[NativeExport] Addon loaded');
+} catch (_) {
+    // Expected until addon is built
+}
+
+ipcMain.handle('native-export-probe', async () => {
+    if (!_nativeExporterAddon) {
+        return { ok: false, reason: 'Native exporter addon not loaded' };
+    }
+    try {
+        return _nativeExporterAddon.probe();
+    } catch (err) {
+        console.error('[NativeExport] probe error:', err.message);
+        return { ok: false, reason: err.message };
+    }
+});
+
+ipcMain.handle('native-export-start', async (event, opts) => {
+    if (!_nativeExporterAddon) {
+        return { ok: false, reason: 'Native exporter addon not loaded' };
+    }
+
+    try {
+        const { width, height, fps, totalFrames } = opts;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        const h264File = path.join(TEMP_PATH, `native-${timestamp}.h264`);
+        const videoFile = path.join(TEMP_PATH, `native-${timestamp}.mp4`);
+        const outputFile = path.join(OUTPUT_PATH, `video-${timestamp}.mp4`);
+
+        if (!fs.existsSync(OUTPUT_PATH)) fs.mkdirSync(OUTPUT_PATH, { recursive: true });
+        if (!fs.existsSync(TEMP_PATH)) fs.mkdirSync(TEMP_PATH, { recursive: true });
+
+        console.log(`[NativeExport] Starting: ${width}x${height} @ ${fps}fps, ${totalFrames} frames`);
+
+        // 1. Encode synthetic frames → .h264
+        const encResult = _nativeExporterAddon.encode({
+            width, height, fps, totalFrames,
+            bitrate: opts.bitrate || 18000000,
+            maxBitrate: opts.maxBitrate || 24000000,
+            gop: opts.gop || (fps * 2),
+            bframes: opts.bframes !== undefined ? opts.bframes : 2,
+            preset: opts.preset || 5,
+            rc: opts.rc || 'vbr_hq',
+            outputPath: h264File,
+        });
+
+        if (!encResult.ok) {
+            console.error('[NativeExport] Encode failed:', encResult.reason);
+            return encResult;
+        }
+
+        console.log(`[NativeExport] Encoded ${encResult.frames} frames in ${encResult.elapsed.toFixed(2)}s (${encResult.fps.toFixed(1)} fps)`);
+
+        // 2. Wrap .h264 → .mp4 via FFmpeg (-c:v copy)
+        await new Promise((resolve, reject) => {
+            const wrapProc = spawn(WEBGL_FFMPEG_PATH, [
+                '-y', '-r', String(fps),
+                '-i', h264File,
+                '-c:v', 'copy',
+                '-movflags', '+faststart',
+                videoFile
+            ], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+            let wrapErr = '';
+            wrapProc.stderr.on('data', d => { wrapErr += d.toString(); });
+            wrapProc.on('close', code => {
+                if (code === 0) resolve();
+                else reject(new Error(`FFmpeg wrap exit ${code}: ${wrapErr.slice(-200)}`));
+            });
+            wrapProc.on('error', reject);
+        });
+
+        // 3. Mux audio (reuse existing _webglMuxAudio pattern)
+        const exp = { videoFile, outputFile };
+        const finalOutput = await _webglMuxAudio(exp);
+
+        // Clean up .h264 temp file
+        try { fs.unlinkSync(h264File); } catch (_) {}
+
+        console.log(`[NativeExport] Output: ${finalOutput}`);
+        return { ok: true, outputPath: finalOutput, frames: encResult.frames, elapsed: encResult.elapsed, fps: encResult.fps };
+    } catch (err) {
+        console.error('[NativeExport] start error:', err.message);
+        return { ok: false, reason: err.message };
+    }
+});
+
+ipcMain.handle('native-export-cancel', async () => {
+    if (_nativeExporterAddon) {
+        try { _nativeExporterAddon.cancel(); } catch (_) {}
+    }
+    return { ok: true };
+});
 
 // Open output folder
 ipcMain.handle('open-output-folder', async () => {

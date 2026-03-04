@@ -5349,6 +5349,46 @@ async function loadPlanIntoCompositor() {
 }
 
 /**
+ * Run Native D3D11 + NVENC export (synthetic frames for now — Phase 1).
+ */
+async function renderVideoNative() {
+    try {
+        updateProgress(10, 'Probing Native D3D11 + NVENC...');
+        const probe = await window.electronAPI.nativeExportProbe();
+        if (!probe.ok) {
+            showToast(`Native export unavailable: ${probe.reason}. Falling back to WebGL2.`, 'warning');
+            return await renderVideoWebGL2();
+        }
+
+        updateProgress(20, `Native D3D11 export starting (GPU: ${probe.gpu})...`);
+
+        const fps = 30;
+        const totalFrames = Math.round((state.totalDuration || 10) * fps);
+
+        const result = await window.electronAPI.nativeExportStart({
+            width: 1920,
+            height: 1080,
+            fps,
+            totalFrames,
+        });
+
+        if (!result.ok) {
+            showToast(`Native export failed: ${result.reason}`, 'error');
+            return { success: false };
+        }
+
+        return {
+            success: true,
+            outputPath: result.outputPath,
+            stats: { frames: result.frames, elapsed: result.elapsed, fps: result.fps }
+        };
+    } catch (err) {
+        showToast(`Native export error: ${err.message}`, 'error');
+        return { success: false };
+    }
+}
+
+/**
  * Run WebGL2 export pipeline.
  * Renders all frames via the engine and pipes to FFmpeg via IPC.
  */
@@ -5456,15 +5496,20 @@ async function renderVideo() {
         const rendererValue = rendererSelect ? rendererSelect.value : 'ffmpeg';
         const useFFmpeg = rendererValue === 'ffmpeg';
         const useWebGL2 = rendererValue === 'webgl2';
+        const useNative = rendererValue === 'native';
 
-        if (useWebGL2) {
+        if (useNative) {
+            updateProgress(5, 'Starting Native D3D11 + NVENC render...');
+        } else if (useWebGL2) {
             updateProgress(5, 'Starting WebGL2 WYSIWYG render...');
         } else {
             updateProgress(5, useFFmpeg ? 'Starting FFmpeg GPU render...' : 'Starting Remotion render...');
         }
 
         let result;
-        if (useWebGL2) {
+        if (useNative) {
+            result = await renderVideoNative();
+        } else if (useWebGL2) {
             result = await renderVideoWebGL2();
         } else if (useFFmpeg) {
             result = await window.electronAPI.runRenderFFmpeg();
