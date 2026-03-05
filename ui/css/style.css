@@ -2366,7 +2366,96 @@ select:focus {
     position: relative;
     flex-shrink: 0;
     cursor: pointer;
+    overflow: visible;
 }
+
+/* In/Out Point Markers */
+.in-out-shade {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+    z-index: 5;
+}
+
+.in-out-workarea {
+    position: absolute;
+    bottom: 0;
+    height: 4px;
+    background: #4a9eff;
+    pointer-events: none;
+    z-index: 6;
+    border-radius: 2px;
+}
+
+.in-out-marker {
+    position: absolute;
+    top: 0;
+    width: 14px;
+    height: 18px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    pointer-events: auto;
+    cursor: pointer;
+    user-select: none;
+}
+
+.in-marker {
+    background: #4a9eff;
+    border-radius: 0 3px 3px 0;
+    margin-left: -1px;
+}
+
+.out-marker {
+    background: #4a9eff;
+    border-radius: 3px 0 0 3px;
+    margin-left: -13px;
+}
+
+/* In/Out Display in timeline header */
+.in-out-display {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: #8e8e93;
+    margin-left: 8px;
+    padding: 2px 6px;
+    background: rgba(74, 158, 255, 0.1);
+    border: 1px solid rgba(74, 158, 255, 0.25);
+    border-radius: 4px;
+}
+
+.in-out-label {
+    color: #4a9eff;
+    font-weight: 600;
+}
+
+.in-out-range {
+    color: #ccc;
+    font-family: 'SF Mono', 'Consolas', monospace;
+}
+
+.in-out-duration {
+    color: #8e8e93;
+}
+
+.in-out-clear {
+    background: none;
+    border: none;
+    color: #8e8e93;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0 2px;
+    line-height: 1;
+}
+.in-out-clear:hover { color: #ff3b30; }
 
 .ruler-tick {
     position: absolute;

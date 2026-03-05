@@ -7,12 +7,12 @@
 // MG Style Themes (must match MotionGraphics.jsx STYLES)
 // ========================================
 const MG_STYLES = {
-    clean:    { primary: '#3b82f6', accent: '#f59e0b', bg: 'rgba(0,0,0,0.7)',    text: '#ffffff', textSub: 'rgba(255,255,255,0.75)', glow: false },
-    bold:     { primary: '#ef4444', accent: '#fbbf24', bg: 'rgba(10,10,10,0.92)', text: '#ffffff', textSub: 'rgba(255,255,255,0.85)', glow: false },
-    minimal:  { primary: '#e5e7eb', accent: '#94a3b8', bg: 'rgba(0,0,0,0.35)',    text: '#f8fafc', textSub: 'rgba(255,255,255,0.5)',  glow: false },
-    neon:     { primary: '#00ff88', accent: '#ff00ff', bg: 'rgba(0,0,15,0.85)',   text: '#ffffff', textSub: 'rgba(255,255,255,0.7)',  glow: true  },
-    cinematic:{ primary: '#d4af37', accent: '#c0c0c0', bg: 'rgba(0,0,0,0.92)',    text: '#f5f0e8', textSub: 'rgba(245,240,232,0.55)', glow: false },
-    elegant:  { primary: '#8b5cf6', accent: '#f472b6', bg: 'rgba(10,0,25,0.82)',  text: '#ffffff', textSub: 'rgba(255,255,255,0.6)',  glow: true  },
+    clean: { primary: '#3b82f6', accent: '#f59e0b', bg: 'rgba(0,0,0,0.7)', text: '#ffffff', textSub: 'rgba(255,255,255,0.75)', glow: false },
+    bold: { primary: '#ef4444', accent: '#fbbf24', bg: 'rgba(10,10,10,0.92)', text: '#ffffff', textSub: 'rgba(255,255,255,0.85)', glow: false },
+    minimal: { primary: '#e5e7eb', accent: '#94a3b8', bg: 'rgba(0,0,0,0.35)', text: '#f8fafc', textSub: 'rgba(255,255,255,0.5)', glow: false },
+    neon: { primary: '#00ff88', accent: '#ff00ff', bg: 'rgba(0,0,15,0.85)', text: '#ffffff', textSub: 'rgba(255,255,255,0.7)', glow: true },
+    cinematic: { primary: '#d4af37', accent: '#c0c0c0', bg: 'rgba(0,0,0,0.92)', text: '#f5f0e8', textSub: 'rgba(245,240,232,0.55)', glow: false },
+    elegant: { primary: '#8b5cf6', accent: '#f472b6', bg: 'rgba(10,0,25,0.82)', text: '#ffffff', textSub: 'rgba(255,255,255,0.6)', glow: true },
 };
 
 // ========================================
@@ -20,61 +20,61 @@ const MG_STYLES = {
 // Maps themeId → font families for MG preview
 // ========================================
 const THEME_FONTS = {
-    tech:      { heading: 'Orbitron, Electrolize, "Courier New", monospace',      body: '"Roboto Mono", "Source Code Pro", monospace' },
-    nature:    { heading: '"Libre Baskerville", Merriweather, Georgia, serif',     body: 'Lora, "Open Sans", Georgia, sans-serif' },
-    crime:     { heading: 'Oswald, "Bebas Neue", Impact, sans-serif',             body: '"Barlow Condensed", Lato, Arial, sans-serif' },
-    corporate: { heading: 'Montserrat, "Work Sans", Arial, sans-serif',           body: '"Source Sans Pro", "Open Sans", "Segoe UI", sans-serif' },
-    luxury:    { heading: '"Playfair Display", Cinzel, Georgia, serif',            body: 'Lora, "Libre Baskerville", "Times New Roman", serif' },
-    sport:     { heading: '"Bebas Neue", "Fjalla One", Impact, sans-serif',        body: '"Roboto Condensed", "Barlow Condensed", Arial, sans-serif' },
-    neutral:   { heading: 'Nunito, Raleway, Arial, sans-serif',                    body: '"Open Sans", Roboto, Arial, sans-serif' },
+    tech: { heading: 'Orbitron, Electrolize, "Courier New", monospace', body: '"Roboto Mono", "Source Code Pro", monospace' },
+    nature: { heading: '"Libre Baskerville", Merriweather, Georgia, serif', body: 'Lora, "Open Sans", Georgia, sans-serif' },
+    crime: { heading: 'Oswald, "Bebas Neue", Impact, sans-serif', body: '"Barlow Condensed", Lato, Arial, sans-serif' },
+    corporate: { heading: 'Montserrat, "Work Sans", Arial, sans-serif', body: '"Source Sans Pro", "Open Sans", "Segoe UI", sans-serif' },
+    luxury: { heading: '"Playfair Display", Cinzel, Georgia, serif', body: 'Lora, "Libre Baskerville", "Times New Roman", serif' },
+    sport: { heading: '"Bebas Neue", "Fjalla One", Impact, sans-serif', body: '"Roboto Condensed", "Barlow Condensed", Arial, sans-serif' },
+    neutral: { heading: 'Nunito, Raleway, Arial, sans-serif', body: '"Open Sans", Roboto, Arial, sans-serif' },
 };
 
 // Theme colors (base palette per theme)
 const THEME_COLORS = {
-    tech:      { primary: '#00ffff', accent: '#00ff00', text: '#ffffff', textSub: 'rgba(255,255,255,0.7)' },
-    nature:    { primary: '#8B4513', accent: '#87CEEB', text: '#ffffff', textSub: 'rgba(255,255,255,0.7)' },
-    crime:     { primary: '#dc143c', accent: '#ffd700', text: '#ffffff', textSub: 'rgba(255,255,255,0.7)' },
+    tech: { primary: '#00ffff', accent: '#00ff00', text: '#ffffff', textSub: 'rgba(255,255,255,0.7)' },
+    nature: { primary: '#8B4513', accent: '#87CEEB', text: '#ffffff', textSub: 'rgba(255,255,255,0.7)' },
+    crime: { primary: '#dc143c', accent: '#ffd700', text: '#ffffff', textSub: 'rgba(255,255,255,0.7)' },
     corporate: { primary: '#0066cc', accent: '#00cc66', text: '#ffffff', textSub: 'rgba(255,255,255,0.7)' },
-    luxury:    { primary: '#d4af37', accent: '#c0c0c0', text: '#ffffff', textSub: 'rgba(255,255,255,0.6)' },
-    sport:     { primary: '#ff4500', accent: '#00ff00', text: '#ffffff', textSub: 'rgba(255,255,255,0.8)' },
-    neutral:   { primary: '#4a90e2', accent: '#e74c3c', text: '#ffffff', textSub: 'rgba(255,255,255,0.7)' },
+    luxury: { primary: '#d4af37', accent: '#c0c0c0', text: '#ffffff', textSub: 'rgba(255,255,255,0.6)' },
+    sport: { primary: '#ff4500', accent: '#00ff00', text: '#ffffff', textSub: 'rgba(255,255,255,0.8)' },
+    neutral: { primary: '#4a90e2', accent: '#e74c3c', text: '#ffffff', textSub: 'rgba(255,255,255,0.7)' },
 };
 
 // Style modifiers — each MG style transforms colors so they stay visually distinct
 const MG_STYLE_MODIFIERS = {
-    clean:     { saturate: 1.0, brighten: 0,   tintHue: null },
-    bold:      { saturate: 1.3, brighten: 15,  tintHue: null },
-    minimal:   { saturate: 0.4, brighten: 40,  tintHue: null },
-    neon:      { saturate: 1.6, brighten: 50,  tintHue: null },
-    cinematic: { saturate: 0.8, brighten: -10, tintHue: 40  },
-    elegant:   { saturate: 1.1, brighten: 10,  tintHue: 280 },
+    clean: { saturate: 1.0, brighten: 0, tintHue: null },
+    bold: { saturate: 1.3, brighten: 15, tintHue: null },
+    minimal: { saturate: 0.4, brighten: 40, tintHue: null },
+    neon: { saturate: 1.6, brighten: 50, tintHue: null },
+    cinematic: { saturate: 0.8, brighten: -10, tintHue: 40 },
+    elegant: { saturate: 1.1, brighten: 10, tintHue: 280 },
 };
 
 function _hexToHSL(hex) {
     hex = hex.replace('#', '');
-    if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-    const r = parseInt(hex.substring(0,2), 16) / 255;
-    const g = parseInt(hex.substring(2,4), 16) / 255;
-    const b = parseInt(hex.substring(4,6), 16) / 255;
-    const max = Math.max(r,g,b), min = Math.min(r,g,b);
-    let h = 0, s = 0, l = (max+min)/2;
+    if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
     if (max !== min) {
         const d = max - min;
         s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-        if (max === r) h = ((g-b)/d + (g<b?6:0)) / 6;
-        else if (max === g) h = ((b-r)/d + 2) / 6;
-        else h = ((r-g)/d + 4) / 6;
+        if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+        else if (max === g) h = ((b - r) / d + 2) / 6;
+        else h = ((r - g) / d + 4) / 6;
     }
-    return { h: h*360, s: s*100, l: l*100 };
+    return { h: h * 360, s: s * 100, l: l * 100 };
 }
 
 function _hslToHex(h, s, l) {
     h = ((h % 360) + 360) % 360;
     s = Math.max(0, Math.min(100, s)) / 100;
     l = Math.max(0, Math.min(100, l)) / 100;
-    const a = s * Math.min(l, 1-l);
-    const f = n => { const k = (n + h/30) % 12; return l - a * Math.max(-1, Math.min(k-3, 9-k, 1)); };
-    const toH = x => Math.round(x*255).toString(16).padStart(2,'0');
+    const a = s * Math.min(l, 1 - l);
+    const f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+    const toH = x => Math.round(x * 255).toString(16).padStart(2, '0');
     return `#${toH(f(0))}${toH(f(8))}${toH(f(4))}`;
 }
 
@@ -259,6 +259,9 @@ const state = {
             'audio-track': 80, 'music-track': 80, 'sfx-track': 60
         }
     },
+    // In/Out point for partial rendering (Premiere-style)
+    inPoint: null,              // seconds (null = start of timeline)
+    outPoint: null,             // seconds (null = end of timeline)
     // WebGL2 Compositor Engine state
     compositor: null,           // Compositor instance
     compositorActive: false,    // Whether compositor preview is active
@@ -270,27 +273,27 @@ const TRACK_HEADER_WIDTH = 100;
 // Built-in gradient backgrounds (mirrors BACKGROUND_LIBRARY from themes.js)
 // ========================================
 const GRADIENT_BACKGROUNDS = {
-    'dark-gradient':  'radial-gradient(ellipse at 50% 40%, #1a1a2e 0%, #0a0a14 60%, #000000 100%)',
-    'blue-minimal':   'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    'dark-blue':      'radial-gradient(ellipse at 50% 50%, #0f2027 0%, #203a43 40%, #2c5364 100%)',
+    'dark-gradient': 'radial-gradient(ellipse at 50% 40%, #1a1a2e 0%, #0a0a14 60%, #000000 100%)',
+    'blue-minimal': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    'dark-blue': 'radial-gradient(ellipse at 50% 50%, #0f2027 0%, #203a43 40%, #2c5364 100%)',
     'green-gradient': 'linear-gradient(160deg, #0f3443 0%, #34e89e 100%)',
-    'warm-sunset':    'linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #fda085 100%)',
-    'midnight':       'radial-gradient(ellipse at 30% 50%, #1a0a2e 0%, #0a0014 50%, #000000 100%)',
-    'cream':          'linear-gradient(180deg, #fdf6e3 0%, #ede0c8 50%, #d4c5a9 100%)',
-    'grid-texture':   'repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(255,255,255,0.03) 49px, rgba(255,255,255,0.03) 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(255,255,255,0.03) 49px, rgba(255,255,255,0.03) 50px), linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%)',
-    'red-dark':       'radial-gradient(ellipse at 50% 50%, #2a0a0a 0%, #1a0505 50%, #0a0000 100%)',
-    'purple-haze':    'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #3a1c71 100%)',
-    'noir':           'radial-gradient(ellipse at 50% 30%, #1a1a1a 0%, #0a0a0a 40%, #000000 100%)',
-    'ocean-deep':     'linear-gradient(180deg, #0c3547 0%, #0a2a3a 40%, #051a2a 100%)',
+    'warm-sunset': 'linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #fda085 100%)',
+    'midnight': 'radial-gradient(ellipse at 30% 50%, #1a0a2e 0%, #0a0014 50%, #000000 100%)',
+    'cream': 'linear-gradient(180deg, #fdf6e3 0%, #ede0c8 50%, #d4c5a9 100%)',
+    'grid-texture': 'repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(255,255,255,0.03) 49px, rgba(255,255,255,0.03) 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(255,255,255,0.03) 49px, rgba(255,255,255,0.03) 50px), linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%)',
+    'red-dark': 'radial-gradient(ellipse at 50% 50%, #2a0a0a 0%, #1a0505 50%, #0a0000 100%)',
+    'purple-haze': 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #3a1c71 100%)',
+    'noir': 'radial-gradient(ellipse at 50% 30%, #1a1a1a 0%, #0a0a0a 40%, #000000 100%)',
+    'ocean-deep': 'linear-gradient(180deg, #0c3547 0%, #0a2a3a 40%, #051a2a 100%)',
 };
 
 const GRADIENT_BACKGROUND_NAMES = {
-    'dark-gradient': 'Dark Gradient',  'blue-minimal': 'Blue Minimal',
-    'dark-blue': 'Dark Blue',          'green-gradient': 'Green Gradient',
-    'warm-sunset': 'Warm Sunset',      'midnight': 'Midnight',
-    'cream': 'Cream',                  'grid-texture': 'Grid Texture',
-    'red-dark': 'Red Dark',            'purple-haze': 'Purple Haze',
-    'noir': 'Noir',                    'ocean-deep': 'Ocean Deep',
+    'dark-gradient': 'Dark Gradient', 'blue-minimal': 'Blue Minimal',
+    'dark-blue': 'Dark Blue', 'green-gradient': 'Green Gradient',
+    'warm-sunset': 'Warm Sunset', 'midnight': 'Midnight',
+    'cream': 'Cream', 'grid-texture': 'Grid Texture',
+    'red-dark': 'Red Dark', 'purple-haze': 'Purple Haze',
+    'noir': 'Noir', 'ocean-deep': 'Ocean Deep',
 };
 
 // ========================================
@@ -465,7 +468,7 @@ function getActiveScenesAtTime(time) {
 async function init() {
     // Add error handlers on video elements to catch loading failures (A and B buffers)
     [elements.videoTrack1, elements.videoTrack2, elements.videoTrack3,
-     elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B].forEach((video, i) => {
+    elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B].forEach((video, i) => {
         if (!video) return;
         const label = i < 3 ? `Track ${i + 1}A` : `Track ${i - 2}B`;
         video.addEventListener('error', (e) => {
@@ -793,6 +796,10 @@ function setupKeyboardShortcuts() {
             e.preventDefault(); injectTestMotionGraphics(); return;
         }
 
+        // In/Out points (Premiere-style: I = set in, O = set out)
+        if (e.code === 'KeyI' && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); setInPoint(state.currentTime); return; }
+        if (e.code === 'KeyO' && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); setOutPoint(state.currentTime); return; }
+
         if (e.code === 'Space') { e.preventDefault(); togglePlayback(); }
         else if (e.shiftKey && e.code === 'KeyF') { e.preventDefault(); zoomToFit(); }
         else if (e.code === 'KeyF') { e.preventDefault(); cutClipAtPlayhead(); }
@@ -800,8 +807,130 @@ function setupKeyboardShortcuts() {
         else if (e.code === 'ArrowRight') { e.preventDefault(); seekToTime(state.currentTime + 1); }
         else if (e.code === 'Home') { e.preventDefault(); seekToTime(0); }
         else if (e.code === 'End') { e.preventDefault(); seekToTime(state.totalDuration); }
-        else if (e.code === 'Escape') { deselectClip(); }
+        else if (e.code === 'Escape') { deselectClip(); clearInOutPoints(); }
     });
+}
+
+// ========================================
+// In/Out Points (Premiere-style work area)
+// ========================================
+function setInPoint(timeSec) {
+    // If out point exists and in would be >= out, ignore
+    if (state.outPoint !== null && timeSec >= state.outPoint) {
+        showToast('In point must be before out point', 'warning');
+        return;
+    }
+    state.inPoint = Math.max(0, timeSec);
+    showToast(`In: ${formatTime(state.inPoint)}`, 'info');
+    renderInOutMarkers();
+    updateInOutDisplay();
+}
+
+function setOutPoint(timeSec) {
+    // If in point exists and out would be <= in, ignore
+    if (state.inPoint !== null && timeSec <= state.inPoint) {
+        showToast('Out point must be after in point', 'warning');
+        return;
+    }
+    state.outPoint = Math.min(timeSec, state.totalDuration);
+    showToast(`Out: ${formatTime(state.outPoint)}`, 'info');
+    renderInOutMarkers();
+    updateInOutDisplay();
+}
+
+function clearInOutPoints() {
+    if (state.inPoint === null && state.outPoint === null) return;
+    state.inPoint = null;
+    state.outPoint = null;
+    showToast('In/Out points cleared', 'info');
+    renderInOutMarkers();
+    updateInOutDisplay();
+}
+
+/** Get effective render range in seconds */
+function getRenderRange() {
+    const inSec = state.inPoint !== null ? state.inPoint : 0;
+    const outSec = state.outPoint !== null ? state.outPoint : state.totalDuration;
+    return { inSec, outSec, duration: outSec - inSec };
+}
+
+/** Draw in/out markers + shaded work area on ruler */
+function renderInOutMarkers() {
+    const ruler = document.getElementById('timeline-ruler');
+    if (!ruler) return;
+    const zoom = state.timeline.zoom;
+
+    // Remove old markers
+    ruler.querySelectorAll('.in-out-marker, .in-out-shade, .in-out-workarea').forEach(el => el.remove());
+
+    const hasIn = state.inPoint !== null;
+    const hasOut = state.outPoint !== null;
+    if (!hasIn && !hasOut) return;
+
+    const inPx = hasIn ? state.inPoint * zoom : 0;
+    const outPx = hasOut ? state.outPoint * zoom : state.totalDuration * zoom;
+
+    // Shaded area before in point (dimmed)
+    if (hasIn && inPx > 0) {
+        const shade = document.createElement('div');
+        shade.className = 'in-out-shade';
+        shade.style.cssText = `left:0; width:${inPx}px;`;
+        ruler.appendChild(shade);
+    }
+
+    // Shaded area after out point (dimmed)
+    if (hasOut) {
+        const shade = document.createElement('div');
+        shade.className = 'in-out-shade';
+        shade.style.cssText = `left:${outPx}px; right:0;`;
+        ruler.appendChild(shade);
+    }
+
+    // Work area bar (bright bar between in and out)
+    const workarea = document.createElement('div');
+    workarea.className = 'in-out-workarea';
+    workarea.style.cssText = `left:${inPx}px; width:${outPx - inPx}px;`;
+    ruler.appendChild(workarea);
+
+    // In marker
+    if (hasIn) {
+        const marker = document.createElement('div');
+        marker.className = 'in-out-marker in-marker';
+        marker.style.left = `${inPx}px`;
+        marker.title = `In: ${formatTime(state.inPoint)}`;
+        marker.textContent = 'I';
+        ruler.appendChild(marker);
+    }
+
+    // Out marker
+    if (hasOut) {
+        const marker = document.createElement('div');
+        marker.className = 'in-out-marker out-marker';
+        marker.style.left = `${outPx}px`;
+        marker.title = `Out: ${formatTime(state.outPoint)}`;
+        marker.textContent = 'O';
+        ruler.appendChild(marker);
+    }
+}
+
+/** Update the time display to show in/out range if set */
+function updateInOutDisplay() {
+    const display = document.getElementById('in-out-display');
+    if (!display) return;
+
+    if (state.inPoint === null && state.outPoint === null) {
+        display.style.display = 'none';
+        return;
+    }
+
+    const { inSec, outSec, duration } = getRenderRange();
+    display.style.display = 'inline-flex';
+    display.innerHTML = `
+        <span class="in-out-label">Work Area:</span>
+        <span class="in-out-range">${formatTime(inSec)} → ${formatTime(outSec)}</span>
+        <span class="in-out-duration">(${formatTime(duration)})</span>
+        <button class="in-out-clear" title="Clear In/Out (Esc)" onclick="clearInOutPoints()">✕</button>
+    `;
 }
 
 // ========================================
@@ -1228,7 +1357,7 @@ function updateMgPropertiesForScene(scene) {
 function setupClipPropertyListeners() {
     // Capture undo state once when user starts dragging any property slider
     const propSliders = [elements.propScale, elements.propPosX, elements.propPosY, elements.propVolume,
-        elements.propCropTop, elements.propCropBottom, elements.propCropLeft, elements.propCropRight, elements.propBorderRadius];
+    elements.propCropTop, elements.propCropBottom, elements.propCropLeft, elements.propCropRight, elements.propBorderRadius];
     propSliders.forEach(slider => {
         if (slider) {
             slider.addEventListener('pointerdown', () => {
@@ -1660,7 +1789,7 @@ function applySceneTransform(sceneIndex) {
 function clearSceneTransform() {
     // Clear transform and crop from all track video/img elements (both A and B buffers)
     [elements.videoTrack1, elements.videoTrack2, elements.videoTrack3,
-     elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B].forEach(video => {
+    elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B].forEach(video => {
         if (video) {
             video.style.transform = '';
             video.style.transformOrigin = '';
@@ -2037,8 +2166,8 @@ function stopPlayback() {
 
     // Pause all track video elements (both A and B buffers)
     [elements.videoTrack1, elements.videoTrack2, elements.videoTrack3,
-     elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B,
-     elements.videoTransitionOut].forEach(video => {
+    elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B,
+    elements.videoTransitionOut].forEach(video => {
         if (video && !video.paused) {
             video.pause();
         }
@@ -2177,7 +2306,7 @@ function startPlaybackLoop() {
                         const tn = scene.trackId?.match(/video-track-(\d)/)?.[1] || '1';
                         const vid = getActiveTrackVideo(tn);
                         if (vid && vid.paused && vid.src) {
-                            vid.play().catch(() => {});
+                            vid.play().catch(() => { });
                         }
                     });
                 }
@@ -2279,7 +2408,7 @@ function playSfxClip(sfx) {
         audio.src = url;
         audio.volume = sfx.volume * state.volume;
         audio.currentTime = 0;
-        audio.play().catch(() => {});
+        audio.play().catch(() => { });
         audio.onended = () => { poolEntry.playing = false; };
         setTimeout(() => { poolEntry.playing = false; }, (sfx.duration + 0.5) * 1000);
     }).catch(() => { poolEntry.playing = false; });
@@ -2322,12 +2451,12 @@ function renderFullscreenMGPreview(scene) {
 
     // Background gradients per style
     const bgGradients = {
-        clean:    'radial-gradient(ellipse at center, #0a0a2e, #000000)',
-        bold:     'radial-gradient(ellipse at center, #1a0000, #0a0a0a)',
-        minimal:  'radial-gradient(ellipse at center, #1a1a2e, #0f0f0f)',
-        neon:     'radial-gradient(ellipse at center, #000020, #000008)',
-        cinematic:'radial-gradient(ellipse at center, #1a1500, #000000)',
-        elegant:  'radial-gradient(ellipse at center, #0a0020, #050010)',
+        clean: 'radial-gradient(ellipse at center, #0a0a2e, #000000)',
+        bold: 'radial-gradient(ellipse at center, #1a0000, #0a0a0a)',
+        minimal: 'radial-gradient(ellipse at center, #1a1a2e, #0f0f0f)',
+        neon: 'radial-gradient(ellipse at center, #000020, #000008)',
+        cinematic: 'radial-gradient(ellipse at center, #1a1500, #000000)',
+        elegant: 'radial-gradient(ellipse at center, #0a0020, #050010)',
     };
     const bgGrad = bgGradients[mg.style || scene.style] || bgGradients.clean;
 
@@ -2449,10 +2578,10 @@ function renderFullscreenMGPreview(scene) {
         case 'mapChart': {
             // Map visual style presets (matches MotionGraphics.jsx MAP_VISUAL_STYLES)
             const MAP_PREVIEW_STYLES = {
-                dark:      { ocean: '#0a1628', land: '#1a2744', border: 'rgba(30,58,95,0.4)', marker: null, label: null, labelBg: null, grid: true },
-                natural:   { ocean: '#1a4a6e', land: '#3a6b4a', border: 'rgba(42,80,56,0.4)', marker: '#ffffff', label: '#ffffff', labelBg: 'rgba(15,30,20,0.88)', grid: false },
+                dark: { ocean: '#0a1628', land: '#1a2744', border: 'rgba(30,58,95,0.4)', marker: null, label: null, labelBg: null, grid: true },
+                natural: { ocean: '#1a4a6e', land: '#3a6b4a', border: 'rgba(42,80,56,0.4)', marker: '#ffffff', label: '#ffffff', labelBg: 'rgba(15,30,20,0.88)', grid: false },
                 satellite: { ocean: '#050d1a', land: '#141e14', border: 'rgba(26,48,32,0.3)', marker: '#00ffcc', label: '#ffffff', labelBg: 'rgba(5,10,15,0.9)', grid: false },
-                light:     { ocean: '#d4e6f1', land: '#ecf0f1', border: 'rgba(189,195,199,0.6)', marker: '#e74c3c', label: '#2c3e50', labelBg: 'rgba(255,255,255,0.92)', grid: true },
+                light: { ocean: '#d4e6f1', land: '#ecf0f1', border: 'rgba(189,195,199,0.6)', marker: '#e74c3c', label: '#2c3e50', labelBg: 'rgba(255,255,255,0.92)', grid: true },
                 political: { ocean: '#b8d4e8', land: '#f0e6d3', border: 'rgba(138,122,106,0.5)', marker: '#c0392b', label: '#2c1810', labelBg: 'rgba(240,230,211,0.92)', grid: true },
             };
             const mps = MAP_PREVIEW_STYLES[mg.mapStyle || 'dark'] || MAP_PREVIEW_STYLES.dark;
@@ -2579,7 +2708,7 @@ function renderFullscreenMGPreview(scene) {
                 if (numMatches.length > 0) {
                     numMatches.slice(0, 3).forEach(m => highlightPhrases.push(m));
                 } else {
-                    const common = new Set(['the','and','for','are','but','not','you','all','can','had','was','one','our','has','with','that','this','from','they','been','have','many','some','them','than','its','over','also','each','which','their','will','there','then','about','would','these','could','after','where']);
+                    const common = new Set(['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'was', 'one', 'our', 'has', 'with', 'that', 'this', 'from', 'they', 'been', 'have', 'many', 'some', 'them', 'than', 'its', 'over', 'also', 'each', 'which', 'their', 'will', 'there', 'then', 'about', 'would', 'these', 'could', 'after', 'where']);
                     const words = rawExcerpt.split(/\s+/).filter(w => w.replace(/[^a-zA-Z]/g, '').length >= 4 && !common.has(w.toLowerCase().replace(/[^a-z]/g, '')));
                     words.sort((a, b) => b.length - a.length);
                     words.slice(0, 2).forEach(w => highlightPhrases.push(w));
@@ -2918,7 +3047,7 @@ async function performTrackTransition(trackVideo, transOut, sceneIndex, newVideo
     applySceneTransformToVideo(trackVideo, scene);
     if (transOut) { transOut.pause(); transOut.src = ''; }
     state.transition.isTransitioning = false;
-    if (state.isPlaying) trackVideo.play().catch(() => {});
+    if (state.isPlaying) trackVideo.play().catch(() => { });
 }
 
 /**
@@ -2947,7 +3076,7 @@ function resetVideoTransitionState(videoElement) {
 // Simple scene jump (no visual effects)
 async function simpleTransitionToScene(nextIndex, wasPlaying) {
     [elements.videoTrack1, elements.videoTrack2, elements.videoTrack3,
-     elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B].forEach(video => {
+    elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B].forEach(video => {
         if (video && !video.paused) video.pause();
     });
 
@@ -3180,7 +3309,7 @@ async function loadVideoPlan({ freshBuild = false } = {}) {
             state._trackSwapPending = { '1': false, '2': false, '3': false }; // Reset deferred swaps
             // Clear _loadedUrl on all buffer elements
             [elements.videoTrack1, elements.videoTrack2, elements.videoTrack3,
-             elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B].forEach(v => {
+            elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B].forEach(v => {
                 if (v) { v._loadedUrl = null; v.src = ''; }
             });
 
@@ -3308,7 +3437,7 @@ async function loadVideoPlan({ freshBuild = false } = {}) {
                             sceneObj._articleImageUrl = url;
                             if (sceneObj.mgData) sceneObj.mgData._articleImageUrl = url;
                         }
-                    }).catch(() => {});
+                    }).catch(() => { });
                 }
                 state.scenes.push(sceneObj);
             }
@@ -3391,49 +3520,49 @@ async function loadVideoPlan({ freshBuild = false } = {}) {
 // ========================================
 const SFX_MAP = {
     // === Smooth / Cinematic ===
-    fade:           { file: 'sfx-fade.mp3',          duration: 0.5 },
-    dissolve:       { file: 'sfx-dissolve.mp3',      duration: 0.5 },
-    crossfade:      { file: 'sfx-fade.mp3',          duration: 0.5 },
-    blur:           { file: 'sfx-blur.mp3',          duration: 0.5 },
-    crossBlur:      { file: 'sfx-blur.mp3',          duration: 0.5 },
-    luma:           { file: 'sfx-wipe.mp3',          duration: 0.3 },
-    ripple:         { file: 'sfx-ripple.mp3',        duration: 0.7 },
-    reveal:         { file: 'sfx-ink.mp3',           duration: 0.6 },
-    morph:          { file: 'sfx-blur.mp3',          duration: 0.5 },
-    dreamFade:      { file: 'sfx-fade.mp3',          duration: 0.5 },
-    filmBurn:       { file: 'sfx-filmburn.mp3',      duration: 0.6 },
+    fade: { file: 'sfx-fade.mp3', duration: 0.5 },
+    dissolve: { file: 'sfx-dissolve.mp3', duration: 0.5 },
+    crossfade: { file: 'sfx-fade.mp3', duration: 0.5 },
+    blur: { file: 'sfx-blur.mp3', duration: 0.5 },
+    crossBlur: { file: 'sfx-blur.mp3', duration: 0.5 },
+    luma: { file: 'sfx-wipe.mp3', duration: 0.3 },
+    ripple: { file: 'sfx-ripple.mp3', duration: 0.7 },
+    reveal: { file: 'sfx-ink.mp3', duration: 0.6 },
+    morph: { file: 'sfx-blur.mp3', duration: 0.5 },
+    dreamFade: { file: 'sfx-fade.mp3', duration: 0.5 },
+    filmBurn: { file: 'sfx-filmburn.mp3', duration: 0.6 },
     // === Energetic / Dynamic ===
-    slide:          { file: 'sfx-slide.mp3',         duration: 0.4 },
-    wipe:           { file: 'sfx-wipe.mp3',          duration: 0.3 },
-    zoom:           { file: 'sfx-zoom.mp3',          duration: 0.5 },
-    push:           { file: 'sfx-slide.mp3',         duration: 0.4 },
-    swipe:          { file: 'sfx-wipe.mp3',          duration: 0.3 },
-    whip:           { file: 'sfx-whip.mp3',          duration: 0.3 },
-    bounce:         { file: 'sfx-bounce.mp3',        duration: 0.4 },
-    splitWipe:      { file: 'sfx-wipe.mp3',          duration: 0.3 },
-    shutterSlice:   { file: 'sfx-shutter.mp3',       duration: 0.3 },
-    zoomBlur:       { file: 'sfx-zoom.mp3',          duration: 0.5 },
+    slide: { file: 'sfx-slide.mp3', duration: 0.4 },
+    wipe: { file: 'sfx-wipe.mp3', duration: 0.3 },
+    zoom: { file: 'sfx-zoom.mp3', duration: 0.5 },
+    push: { file: 'sfx-slide.mp3', duration: 0.4 },
+    swipe: { file: 'sfx-wipe.mp3', duration: 0.3 },
+    whip: { file: 'sfx-whip.mp3', duration: 0.3 },
+    bounce: { file: 'sfx-bounce.mp3', duration: 0.4 },
+    splitWipe: { file: 'sfx-wipe.mp3', duration: 0.3 },
+    shutterSlice: { file: 'sfx-shutter.mp3', duration: 0.3 },
+    zoomBlur: { file: 'sfx-zoom.mp3', duration: 0.5 },
     // === Dramatic / Film ===
-    flash:          { file: 'sfx-flash.mp3',         duration: 0.3 },
-    cameraFlash:    { file: 'sfx-camera-flash.mp3',  duration: 0.3 },
-    flare:          { file: 'sfx-flare.mp3',         duration: 0.6 },
-    lightLeak:      { file: 'sfx-flare.mp3',         duration: 0.6 },
-    vignetteBlink:  { file: 'sfx-camera-flash.mp3',  duration: 0.3 },
-    shadowWipe:     { file: 'sfx-wipe.mp3',          duration: 0.3 },
-    filmGrain:      { file: 'sfx-filmburn.mp3',      duration: 0.6 },
-    ink:            { file: 'sfx-ink.mp3',           duration: 0.6 },
-    directionalBlur:{ file: 'sfx-blur.mp3',          duration: 0.5 },
-    colorFade:      { file: 'sfx-fade.mp3',          duration: 0.5 },
-    spin:           { file: 'sfx-spin.mp3',          duration: 0.6 },
-    prismShift:     { file: 'sfx-prism.mp3',         duration: 0.5 },
+    flash: { file: 'sfx-flash.mp3', duration: 0.3 },
+    cameraFlash: { file: 'sfx-camera-flash.mp3', duration: 0.3 },
+    flare: { file: 'sfx-flare.mp3', duration: 0.6 },
+    lightLeak: { file: 'sfx-flare.mp3', duration: 0.6 },
+    vignetteBlink: { file: 'sfx-camera-flash.mp3', duration: 0.3 },
+    shadowWipe: { file: 'sfx-wipe.mp3', duration: 0.3 },
+    filmGrain: { file: 'sfx-filmburn.mp3', duration: 0.6 },
+    ink: { file: 'sfx-ink.mp3', duration: 0.6 },
+    directionalBlur: { file: 'sfx-blur.mp3', duration: 0.5 },
+    colorFade: { file: 'sfx-fade.mp3', duration: 0.5 },
+    spin: { file: 'sfx-spin.mp3', duration: 0.6 },
+    prismShift: { file: 'sfx-prism.mp3', duration: 0.5 },
     // === Glitch / Tech ===
-    glitch:         { file: 'sfx-glitch.mp3',        duration: 0.4 },
-    pixelate:       { file: 'sfx-glitch.mp3',        duration: 0.4 },
-    mosaic:         { file: 'sfx-glitch.mp3',        duration: 0.4 },
-    dataMosh:       { file: 'sfx-glitch.mp3',        duration: 0.4 },
-    scanline:       { file: 'sfx-static.mp3',        duration: 0.5 },
-    rgbSplit:       { file: 'sfx-glitch.mp3',        duration: 0.4 },
-    static:         { file: 'sfx-static.mp3',        duration: 0.5 },
+    glitch: { file: 'sfx-glitch.mp3', duration: 0.4 },
+    pixelate: { file: 'sfx-glitch.mp3', duration: 0.4 },
+    mosaic: { file: 'sfx-glitch.mp3', duration: 0.4 },
+    dataMosh: { file: 'sfx-glitch.mp3', duration: 0.4 },
+    scanline: { file: 'sfx-static.mp3', duration: 0.5 },
+    rgbSplit: { file: 'sfx-glitch.mp3', duration: 0.4 },
+    static: { file: 'sfx-static.mp3', duration: 0.5 },
 };
 
 function generateSfxClips() {
@@ -3545,6 +3674,7 @@ function renderTimeline() {
                 </div>
                 <span class="divider">|</span>
                 <span id="timeline-time">${formatTime(state.currentTime)} / ${formatTime(state.totalDuration)}</span>
+                <span id="in-out-display" class="in-out-display"></span>
             </div>
         </div>
         <div class="timeline-body">
@@ -3559,6 +3689,8 @@ function renderTimeline() {
     renderRuler(duration);
     renderTracks();
     updatePlayhead();
+    renderInOutMarkers();
+    updateInOutDisplay();
 
     const scroll = document.getElementById('timeline-scroll');
     scroll.addEventListener('scroll', () => { state.timeline.scrollX = scroll.scrollLeft; updatePlayhead(); });
@@ -3660,19 +3792,19 @@ function renderTracks() {
         // Motion Graphics clips on mg-track (per-type colors)
         if (track.id === 'mg-track' && state.motionGraphics.length > 0) {
             const mgMeta = {
-                headline:       { icon: 'H',  colorClass: 'mg-headline' },
-                lowerThird:     { icon: 'L3', colorClass: 'mg-lowerthird' },
-                statCounter:    { icon: '#',  colorClass: 'mg-stat' },
-                callout:        { icon: '"',  colorClass: 'mg-callout' },
-                bulletList:     { icon: '::', colorClass: 'mg-bullets' },
-                focusWord:      { icon: 'F',  colorClass: 'mg-focusword' },
-                progressBar:    { icon: '%',  colorClass: 'mg-progressbar' },
-                barChart:       { icon: 'BC', colorClass: 'mg-barchart' },
-                donutChart:     { icon: 'DC', colorClass: 'mg-donutchart' },
+                headline: { icon: 'H', colorClass: 'mg-headline' },
+                lowerThird: { icon: 'L3', colorClass: 'mg-lowerthird' },
+                statCounter: { icon: '#', colorClass: 'mg-stat' },
+                callout: { icon: '"', colorClass: 'mg-callout' },
+                bulletList: { icon: '::', colorClass: 'mg-bullets' },
+                focusWord: { icon: 'F', colorClass: 'mg-focusword' },
+                progressBar: { icon: '%', colorClass: 'mg-progressbar' },
+                barChart: { icon: 'BC', colorClass: 'mg-barchart' },
+                donutChart: { icon: 'DC', colorClass: 'mg-donutchart' },
                 comparisonCard: { icon: 'VS', colorClass: 'mg-comparison' },
-                timeline:       { icon: 'TL', colorClass: 'mg-timeline-clip' },
-                rankingList:    { icon: 'RK', colorClass: 'mg-ranking' },
-                kineticText:    { icon: 'KT', colorClass: 'mg-kinetic' },
+                timeline: { icon: 'TL', colorClass: 'mg-timeline-clip' },
+                rankingList: { icon: 'RK', colorClass: 'mg-ranking' },
+                kineticText: { icon: 'KT', colorClass: 'mg-kinetic' },
             };
             state.motionGraphics.forEach((mg, i) => {
                 const left = mg.startTime * state.timeline.zoom;
@@ -3717,14 +3849,14 @@ function renderTracks() {
             // Full-screen MG scene on V3
             if (scene.isMGScene) {
                 const mgMeta = {
-                    barChart:       { name: 'Bar Chart',       colorClass: 'mg-barchart' },
-                    donutChart:     { name: 'Donut Chart',     colorClass: 'mg-donutchart' },
-                    comparisonCard: { name: 'Comparison',      colorClass: 'mg-comparison' },
-                    timeline:       { name: 'Timeline',        colorClass: 'mg-timeline-clip' },
-                    rankingList:    { name: 'Ranking',         colorClass: 'mg-ranking' },
-                    bulletList:     { name: 'Bullet List',     colorClass: 'mg-bullets' },
-                    mapChart:       { name: 'Map',             colorClass: 'mg-mapchart' },
-                    articleHighlight: { name: 'Article',       colorClass: 'mg-article' },
+                    barChart: { name: 'Bar Chart', colorClass: 'mg-barchart' },
+                    donutChart: { name: 'Donut Chart', colorClass: 'mg-donutchart' },
+                    comparisonCard: { name: 'Comparison', colorClass: 'mg-comparison' },
+                    timeline: { name: 'Timeline', colorClass: 'mg-timeline-clip' },
+                    rankingList: { name: 'Ranking', colorClass: 'mg-ranking' },
+                    bulletList: { name: 'Bullet List', colorClass: 'mg-bullets' },
+                    mapChart: { name: 'Map', colorClass: 'mg-mapchart' },
+                    articleHighlight: { name: 'Article', colorClass: 'mg-article' },
                 };
                 const meta = mgMeta[scene.type] || { name: scene.type || 'MG', colorClass: '' };
                 const clipName = scene.text ? `${meta.name}: ${scene.text}` : meta.name;
@@ -4574,7 +4706,7 @@ function waitForVideoReady(video, timeout = 3000) {
 function cleanupVideoHandlers() {
     // Clean up handlers from all track videos (both A and B buffers)
     [elements.videoTrack1, elements.videoTrack2, elements.videoTrack3,
-     elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B].forEach(video => {
+    elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B].forEach(video => {
         if (video) {
             video.ontimeupdate = null;
             video.onended = null;
@@ -4929,171 +5061,172 @@ async function loadActiveScenes(activeScenes) {
         }
 
         // Each scene loads in parallel (async IPC calls run concurrently)
-        sceneLoadPromises.push((async () => { try {
-            const trackNum = scene.trackId?.match(/video-track-(\d)/)?.[1] || '1';
-            const img = elements[`imgTrack${trackNum}`];
-            const isImage = scene.mediaType === 'image';
+        sceneLoadPromises.push((async () => {
+            try {
+                const trackNum = scene.trackId?.match(/video-track-(\d)/)?.[1] || '1';
+                const img = elements[`imgTrack${trackNum}`];
+                const isImage = scene.mediaType === 'image';
 
-            const originalIndex = scene.index !== undefined ? scene.index : index;
-            const mediaUrl = await getCachedMediaUrl(originalIndex, scene.mediaExtension);
-            if (!mediaUrl) {
-                console.warn(`[Preview] Scene ${index} (track ${trackNum}): no media URL found for index=${originalIndex} ext=${scene.mediaExtension}`);
-                return;
-            }
+                const originalIndex = scene.index !== undefined ? scene.index : index;
+                const mediaUrl = await getCachedMediaUrl(originalIndex, scene.mediaExtension);
+                if (!mediaUrl) {
+                    console.warn(`[Preview] Scene ${index} (track ${trackNum}): no media URL found for index=${originalIndex} ext=${scene.mediaExtension}`);
+                    return;
+                }
 
-            console.log(`[Preview] Loading scene ${index} on track ${trackNum}, isImage=${isImage}, url=${mediaUrl.substring(mediaUrl.lastIndexOf('/') + 1)}`);
+                console.log(`[Preview] Loading scene ${index} on track ${trackNum}, isImage=${isImage}, url=${mediaUrl.substring(mediaUrl.lastIndexOf('/') + 1)}`);
 
-            if (isImage && img) {
-                // IMAGE SCENE: show img, hide both video buffers for this track
-                const videoA = elements[`videoTrack${trackNum}`];
-                const videoB = elements[`videoTrack${trackNum}B`];
-                if (videoA) videoA.classList.remove('active');
-                if (videoB) videoB.classList.remove('active');
-                img.style.objectFit = scene.fitMode || 'cover';
+                if (isImage && img) {
+                    // IMAGE SCENE: show img, hide both video buffers for this track
+                    const videoA = elements[`videoTrack${trackNum}`];
+                    const videoB = elements[`videoTrack${trackNum}B`];
+                    if (videoA) videoA.classList.remove('active');
+                    if (videoB) videoB.classList.remove('active');
+                    img.style.objectFit = scene.fitMode || 'cover';
 
-                const imgSourceChanging = img.src !== mediaUrl;
+                    const imgSourceChanging = img.src !== mediaUrl;
 
-                if (imgSourceChanging && img.src && state.isPlaying && !state.transition.isTransitioning) {
-                    const transOutImg = elements.imgTransitionOut;
-                    const container = elements.videoContainer;
-                    if (transOutImg && container) {
-                        transOutImg.style.zIndex = parseInt(trackNum) + 5;
+                    if (imgSourceChanging && img.src && state.isPlaying && !state.transition.isTransitioning) {
+                        const transOutImg = elements.imgTransitionOut;
+                        const container = elements.videoContainer;
+                        if (transOutImg && container) {
+                            transOutImg.style.zIndex = parseInt(trackNum) + 5;
+                            img.classList.add('active');
+                            performImageTransition(img, transOutImg, scene, mediaUrl);
+                        }
+                    } else {
+                        if (imgSourceChanging) img.src = mediaUrl;
+                        updateKenBurnsTransform(img, scene);
                         img.classList.add('active');
-                        performImageTransition(img, transOutImg, scene, mediaUrl);
                     }
                 } else {
-                    if (imgSourceChanging) img.src = mediaUrl;
-                    updateKenBurnsTransform(img, scene);
-                    img.classList.add('active');
-                }
-            } else {
-                // VIDEO SCENE: double-buffer swap for lag-free playback
-                if (img) img.classList.remove('active');
+                    // VIDEO SCENE: double-buffer swap for lag-free playback
+                    if (img) img.classList.remove('active');
 
-                const { active: activeVid, buffer: bufferVid } = getTrackVideoPair(trackNum);
-                const sceneTime = (state.currentTime - scene.startTime) + (scene.mediaOffset || 0);
+                    const { active: activeVid, buffer: bufferVid } = getTrackVideoPair(trackNum);
+                    const sceneTime = (state.currentTime - scene.startTime) + (scene.mediaOffset || 0);
 
-                if (activeVid._loadedUrl === mediaUrl) {
-                    // Same source already active — just sync time
-                    if (Math.abs(activeVid.currentTime - sceneTime) > 0.15) {
+                    if (activeVid._loadedUrl === mediaUrl) {
+                        // Same source already active — just sync time
+                        if (Math.abs(activeVid.currentTime - sceneTime) > 0.15) {
+                            activeVid.currentTime = sceneTime;
+                        }
+                        activeVid.volume = getSceneVolume(scene);
+                        activeVid.muted = false;
+                        activeVid.classList.add('active');
+                        applySceneTransformToVideo(activeVid, scene);
+                        if (state.isPlaying && activeVid.paused) {
+                            activeVid.play().catch(() => { });
+                        }
+                    } else if (bufferVid._loadedUrl === mediaUrl && bufferVid.readyState >= 2) {
+                        // Buffer has this source pre-loaded and ready
+                        const transOut = elements.videoTransitionOut;
+                        const shouldAnimate = state.isPlaying && !state.transition.isTransitioning
+                            && activeVid._loadedUrl && transOut;
+
+                        if (shouldAnimate) {
+                            // Animated transition — load into dedicated transition-out element
+                            // (browser cache serves it instantly since buffer already fetched it)
+                            console.log(`[DoubleBuffer] Animated transition on track ${trackNum}`);
+                            state._trackSwapPending[trackNum] = true;
+
+                            transOut.src = mediaUrl;
+                            transOut.load();
+                            transOut.currentTime = sceneTime;
+                            transOut.volume = getSceneVolume(scene);
+                            transOut.muted = false;
+                            transOut.style.zIndex = parseInt(trackNum) + 5;
+                            applySceneTransformToVideo(transOut, scene);
+
+                            // Fire-and-forget — performTrackTransition manages its own lifecycle
+                            performTrackTransition(activeVid, transOut, originalIndex, mediaUrl, scene)
+                                .then(() => {
+                                    state._trackSwapPending[trackNum] = false;
+                                    // After transition, activeVid has new source — update tracking
+                                    activeVid._loadedUrl = mediaUrl;
+                                    bufferVid._loadedUrl = null; // free buffer for next preload
+                                }).catch(() => {
+                                    state._trackSwapPending[trackNum] = false;
+                                });
+                        } else {
+                            // Instant swap (not playing, already transitioning, or scrubbing)
+                            console.log(`[DoubleBuffer] Instant swap on track ${trackNum}: buffer ready`);
+                            activeVid.classList.remove('active');
+                            activeVid.pause();
+
+                            bufferVid.currentTime = sceneTime;
+                            bufferVid.volume = getSceneVolume(scene);
+                            bufferVid.muted = false;
+                            bufferVid.classList.add('active');
+                            applySceneTransformToVideo(bufferVid, scene);
+                            if (state.isPlaying) bufferVid.play().catch(() => { });
+
+                            swapTrackActive(trackNum);
+                        }
+                    } else if (!activeVid._loadedUrl) {
+                        // First load on this track — load directly into active element
+                        console.log(`[DoubleBuffer] First load on track ${trackNum}`);
+                        activeVid.src = mediaUrl;
+                        activeVid._loadedUrl = mediaUrl;
+                        activeVid.load();
                         activeVid.currentTime = sceneTime;
-                    }
-                    activeVid.volume = getSceneVolume(scene);
-                    activeVid.muted = false;
-                    activeVid.classList.add('active');
-                    applySceneTransformToVideo(activeVid, scene);
-                    if (state.isPlaying && activeVid.paused) {
-                        activeVid.play().catch(() => {});
-                    }
-                } else if (bufferVid._loadedUrl === mediaUrl && bufferVid.readyState >= 2) {
-                    // Buffer has this source pre-loaded and ready
-                    const transOut = elements.videoTransitionOut;
-                    const shouldAnimate = state.isPlaying && !state.transition.isTransitioning
-                        && activeVid._loadedUrl && transOut;
-
-                    if (shouldAnimate) {
-                        // Animated transition — load into dedicated transition-out element
-                        // (browser cache serves it instantly since buffer already fetched it)
-                        console.log(`[DoubleBuffer] Animated transition on track ${trackNum}`);
+                        activeVid.volume = getSceneVolume(scene);
+                        activeVid.muted = false;
+                        activeVid.classList.add('active');
+                        applySceneTransformToVideo(activeVid, scene);
+                        if (state.isPlaying && activeVid.paused) {
+                            activeVid.play().catch(() => { });
+                        }
+                    } else {
+                        // Fallback: NON-BLOCKING — old clip stays visible while buffer loads
+                        // The swap happens asynchronously when buffer is ready (no await)
+                        console.log(`[DoubleBuffer] Deferred swap on track ${trackNum} (buffer miss)`);
                         state._trackSwapPending[trackNum] = true;
 
-                        transOut.src = mediaUrl;
-                        transOut.load();
-                        transOut.currentTime = sceneTime;
-                        transOut.volume = getSceneVolume(scene);
-                        transOut.muted = false;
-                        transOut.style.zIndex = parseInt(trackNum) + 5;
-                        applySceneTransformToVideo(transOut, scene);
-
-                        // Fire-and-forget — performTrackTransition manages its own lifecycle
-                        performTrackTransition(activeVid, transOut, originalIndex, mediaUrl, scene)
-                            .then(() => {
-                                state._trackSwapPending[trackNum] = false;
-                                // After transition, activeVid has new source — update tracking
-                                activeVid._loadedUrl = mediaUrl;
-                                bufferVid._loadedUrl = null; // free buffer for next preload
-                            }).catch(() => {
-                                state._trackSwapPending[trackNum] = false;
-                            });
-                    } else {
-                        // Instant swap (not playing, already transitioning, or scrubbing)
-                        console.log(`[DoubleBuffer] Instant swap on track ${trackNum}: buffer ready`);
-                        activeVid.classList.remove('active');
-                        activeVid.pause();
-
-                        bufferVid.currentTime = sceneTime;
-                        bufferVid.volume = getSceneVolume(scene);
-                        bufferVid.muted = false;
-                        bufferVid.classList.add('active');
-                        applySceneTransformToVideo(bufferVid, scene);
-                        if (state.isPlaying) bufferVid.play().catch(() => {});
-
-                        swapTrackActive(trackNum);
-                    }
-                } else if (!activeVid._loadedUrl) {
-                    // First load on this track — load directly into active element
-                    console.log(`[DoubleBuffer] First load on track ${trackNum}`);
-                    activeVid.src = mediaUrl;
-                    activeVid._loadedUrl = mediaUrl;
-                    activeVid.load();
-                    activeVid.currentTime = sceneTime;
-                    activeVid.volume = getSceneVolume(scene);
-                    activeVid.muted = false;
-                    activeVid.classList.add('active');
-                    applySceneTransformToVideo(activeVid, scene);
-                    if (state.isPlaying && activeVid.paused) {
-                        activeVid.play().catch(() => {});
-                    }
-                } else {
-                    // Fallback: NON-BLOCKING — old clip stays visible while buffer loads
-                    // The swap happens asynchronously when buffer is ready (no await)
-                    console.log(`[DoubleBuffer] Deferred swap on track ${trackNum} (buffer miss)`);
-                    state._trackSwapPending[trackNum] = true;
-
-                    // Only re-load if buffer doesn't already have this URL
-                    if (bufferVid._loadedUrl !== mediaUrl) {
-                        bufferVid.src = mediaUrl;
-                        bufferVid._loadedUrl = mediaUrl;
-                        bufferVid.load();
-                    }
-
-                    // Fire-and-forget: swap when buffer is ready
-                    let swapped = false;
-                    const doSwap = () => {
-                        if (swapped) return;
-                        swapped = true;
-                        // Guard: if scene is no longer active (user seeked), skip stale swap
-                        if (state.currentTime < scene.startTime || state.currentTime >= scene.endTime) {
-                            state._trackSwapPending[trackNum] = false;
-                            return;
+                        // Only re-load if buffer doesn't already have this URL
+                        if (bufferVid._loadedUrl !== mediaUrl) {
+                            bufferVid.src = mediaUrl;
+                            bufferVid._loadedUrl = mediaUrl;
+                            bufferVid.load();
                         }
-                        // Use CURRENT time (not stale sceneTime from when load started)
-                        const now = (state.currentTime - scene.startTime) + (scene.mediaOffset || 0);
-                        activeVid.classList.remove('active');
-                        activeVid.pause();
 
-                        bufferVid.currentTime = Math.max(0, now);
-                        bufferVid.volume = getSceneVolume(scene);
-                        bufferVid.muted = false;
-                        bufferVid.classList.add('active');
-                        applySceneTransformToVideo(bufferVid, scene);
-                        if (state.isPlaying) bufferVid.play().catch(() => {});
+                        // Fire-and-forget: swap when buffer is ready
+                        let swapped = false;
+                        const doSwap = () => {
+                            if (swapped) return;
+                            swapped = true;
+                            // Guard: if scene is no longer active (user seeked), skip stale swap
+                            if (state.currentTime < scene.startTime || state.currentTime >= scene.endTime) {
+                                state._trackSwapPending[trackNum] = false;
+                                return;
+                            }
+                            // Use CURRENT time (not stale sceneTime from when load started)
+                            const now = (state.currentTime - scene.startTime) + (scene.mediaOffset || 0);
+                            activeVid.classList.remove('active');
+                            activeVid.pause();
 
-                        swapTrackActive(trackNum);
-                        state._trackSwapPending[trackNum] = false;
-                    };
-                    if (bufferVid.readyState >= 2) {
-                        doSwap();
-                    } else {
-                        bufferVid.addEventListener('canplay', doSwap, { once: true });
-                        setTimeout(doSwap, 300); // short timeout — old clip plays naturally meanwhile
+                            bufferVid.currentTime = Math.max(0, now);
+                            bufferVid.volume = getSceneVolume(scene);
+                            bufferVid.muted = false;
+                            bufferVid.classList.add('active');
+                            applySceneTransformToVideo(bufferVid, scene);
+                            if (state.isPlaying) bufferVid.play().catch(() => { });
+
+                            swapTrackActive(trackNum);
+                            state._trackSwapPending[trackNum] = false;
+                        };
+                        if (bufferVid.readyState >= 2) {
+                            doSwap();
+                        } else {
+                            bufferVid.addEventListener('canplay', doSwap, { once: true });
+                            setTimeout(doSwap, 300); // short timeout — old clip plays naturally meanwhile
+                        }
+                        // Don't await — loadActiveScenes returns immediately, old clip keeps playing
                     }
-                    // Don't await — loadActiveScenes returns immediately, old clip keeps playing
                 }
+            } catch (e) {
+                console.error('[Preview] Failed to load scene media:', e);
             }
-        } catch (e) {
-            console.error('[Preview] Failed to load scene media:', e);
-        }
         })());
     }
     // Wait for all scene loads to complete in parallel
@@ -5143,7 +5276,7 @@ async function loadActiveScenes(activeScenes) {
                         elements.bgVideo.currentTime = activeVideo.currentTime;
                     }
                     elements.bgVideo.classList.add('active');
-                    if (state.isPlaying && elements.bgVideo.paused && elements.bgVideo.src) elements.bgVideo.play().catch(() => {});
+                    if (state.isPlaying && elements.bgVideo.paused && elements.bgVideo.src) elements.bgVideo.play().catch(() => { });
                 }
             }
         } else if (bgType.startsWith('pattern:')) {
@@ -5174,7 +5307,7 @@ async function loadActiveScenes(activeScenes) {
                                 elements.bgVideo.style.filter = '';
                                 elements.bgVideo.style.transform = '';
                                 elements.bgVideo.classList.add('active');
-                                if (state.isPlaying && elements.bgVideo.paused) elements.bgVideo.play().catch(() => {});
+                                if (state.isPlaying && elements.bgVideo.paused) elements.bgVideo.play().catch(() => { });
                             }
                         }
                     }
@@ -5349,32 +5482,205 @@ async function loadPlanIntoCompositor() {
 }
 
 /**
- * Run Native D3D11 + NVENC export (synthetic frames for now — Phase 1).
+ * Run Native D3D11 + NVENC export — builds RenderPlan from video plan.
+ * Milestone D1: eligibility gate + image-only RenderPlan builder.
  */
 async function renderVideoNative() {
     try {
-        updateProgress(10, 'Probing Native D3D11 + NVENC...');
+        const plan = state.videoPlan;
+        if (!plan || !plan.scenes || plan.scenes.length === 0) {
+            showToast('No video plan loaded — cannot render', 'error');
+            return { success: false };
+        }
+
+        // ── Classify scenes ───────────────────────────────────────
+        const videoScenes = plan.scenes.filter(s => s.mediaType === 'video');
+        const imageScenes = plan.scenes.filter(s => s.mediaType === 'image');
+        const mgOverlays = plan.motionGraphics || [];
+        const mgScenes = plan.mgScenes || [];
+        const mgFromScenes = plan.scenes.filter(s => s.isMGScene);
+        const totalMGs = mgOverlays.length + mgScenes.length + mgFromScenes.length;
+
+        console.log(`[NativeExport] Native eligible: videos=${videoScenes.length} images=${imageScenes.length} mgOverlays=${mgOverlays.length} mgScenes=${mgScenes.length + mgFromScenes.length}`);
+
+        // ── Probe GPU ─────────────────────────────────────────────
+        updateProgress(5, 'Probing Native D3D11 + NVENC...');
         const probe = await window.electronAPI.nativeExportProbe();
         if (!probe.ok) {
             showToast(`Native export unavailable: ${probe.reason}. Falling back to WebGL2.`, 'warning');
             return await renderVideoWebGL2();
         }
 
-        updateProgress(20, `Native D3D11 export starting (GPU: ${probe.gpu})...`);
+        // ── Pre-render MGs as PNG sequences ──────────────────────
+        let mgLayers = [];
+        if (totalMGs > 0) {
+            updateProgress(10, `Pre-rendering ${totalMGs} motion graphics as PNG sequences...`);
+            const mgResult = await window.electronAPI.preRenderMGsPNG({
+                motionGraphics: mgOverlays,
+                mgScenes,
+                scenes: plan.scenes,
+                scriptContext: plan.scriptContext || {},
+                fps: plan.fps || 30,
+            });
 
-        const fps = 30;
-        const totalFrames = Math.round((state.totalDuration || 10) * fps);
+            if (!mgResult.ok) {
+                console.warn(`[NativeExport] MG pre-render failed: ${mgResult.reason} — continuing without MGs`);
+                showToast(`MG pre-render failed: ${mgResult.reason}`, 'warning');
+            } else {
+                mgLayers = mgResult.layers || [];
+                console.log(`[NativeExport] Pre-rendered ${mgLayers.length} MG sequences`);
+            }
+        }
 
-        const result = await window.electronAPI.nativeExportStart({
-            width: 1920,
-            height: 1080,
-            fps,
-            totalFrames,
+        // ── Build native RenderPlan ───────────────────────────────
+        const fps = plan.fps || 30;
+        const width = plan.width || 1920;
+        const height = plan.height || 1080;
+        const allMediaScenes = [...imageScenes, ...videoScenes];
+        const fullDuration = plan.totalDuration || (allMediaScenes.length > 0 ? Math.max(...allMediaScenes.map(s => s.endTime)) : 10);
+
+        // In/Out points — partial render support
+        const { inSec, outSec } = getRenderRange();
+        const renderInSec = Math.min(inSec, fullDuration);
+        const renderOutSec = Math.min(outSec, fullDuration);
+        const renderDuration = renderOutSec - renderInSec;
+        const frameOffset = Math.round(renderInSec * fps); // shift all layers by this
+        const totalFrames = Math.round(renderDuration * fps);
+
+        const rangeLabel = (state.inPoint !== null || state.outPoint !== null)
+            ? ` [${formatTime(renderInSec)}→${formatTime(renderOutSec)}]` : '';
+        console.log(`[NativeExport] Native export starting (D3D11 + NVENC)${rangeLabel}`);
+        updateProgress(30, `Native D3D11 compositing (GPU: ${probe.gpu})${rangeLabel}...`);
+
+        if (state.inPoint !== null || state.outPoint !== null) {
+            console.log(`[NativeExport] In/Out range: ${formatTime(renderInSec)} → ${formatTime(renderOutSec)} (${totalFrames} frames, offset=${frameOffset})`);
+        }
+
+        // Background solid black layer spanning full render range
+        const layers = [
+            { type: 'solid', color: [0, 0, 0, 1], startFrame: 0, endFrame: totalFrames, trackNum: 1 }
+        ];
+
+        // Helper: shift layer frames by in-point offset, skip if entirely outside render range
+        function addLayer(layerObj) {
+            let sf = layerObj.startFrame - frameOffset;
+            let ef = layerObj.endFrame - frameOffset;
+            if (ef <= 0 || sf >= totalFrames) return; // entirely outside render range
+            sf = Math.max(0, sf);
+            ef = Math.min(totalFrames, ef);
+            layers.push({ ...layerObj, startFrame: sf, endFrame: ef });
+        }
+
+        // Image layers from plan scenes
+        for (const scene of imageScenes) {
+            addLayer({
+                type: 'image',
+                mediaPath: scene.mediaFile,
+                startFrame: Math.round(scene.startTime * fps),
+                endFrame: Math.round(scene.endTime * fps),
+                trackNum: 2,
+                fitMode: scene.fitMode || 'cover',
+                translateX: scene.posX || 0,
+                translateY: scene.posY || 0,
+                scaleX: scene.scale || 1,
+                scaleY: scene.scale || 1,
+                rotationRad: 0,
+                opacity: 1.0,
+                anchorX: 0.5,
+                anchorY: 0.5,
+            });
+        }
+
+        // Video layers from plan scenes (MF decode + NV12/BGRA)
+        for (const scene of videoScenes) {
+            const absStart = Math.round(scene.startTime * fps);
+            const absEnd = Math.round(scene.endTime * fps);
+            // If in-point cuts into this clip, adjust trimStartSec so video starts at the right point
+            const clippedStart = Math.max(absStart, frameOffset);
+            const trimAdjust = (clippedStart - absStart) / fps;
+            addLayer({
+                type: 'video',
+                mediaPath: scene.mediaFile,
+                startFrame: absStart,
+                endFrame: absEnd,
+                trackNum: 2,
+                fitMode: scene.fitMode || 'cover',
+                trimStartSec: (scene.trimStart || 0) + trimAdjust,
+                translateX: scene.posX || 0,
+                translateY: scene.posY || 0,
+                scaleX: scene.scale || 1,
+                scaleY: scene.scale || 1,
+                rotationRad: 0,
+                opacity: 1.0,
+                anchorX: 0.5,
+                anchorY: 0.5,
+            });
+        }
+
+        // MG imageSequence layers from pre-rendered PNGs
+        for (const mgLayer of mgLayers) {
+            if (mgLayer.isFullScreen) {
+                const matchScene = mgScenes[mgLayer.mgIndex] || mgFromScenes[mgLayer.mgIndex];
+                const absStart = matchScene ? Math.round((matchScene.startTime || 0) * fps) : 0;
+                const absEnd = matchScene ? Math.round((matchScene.endTime || 0) * fps) : absStart + mgLayer.seqFrameCount;
+                // Adjust seqLocalStart if in-point cuts into this MG
+                const clippedStart = Math.max(absStart, frameOffset);
+                const localAdj = clippedStart - absStart;
+
+                addLayer({
+                    type: 'imageSequence',
+                    startFrame: absStart,
+                    endFrame: absEnd,
+                    trackNum: 1,
+                    opacity: 1.0,
+                    fitMode: 'cover',
+                    seqDir: mgLayer.seqDir,
+                    seqPattern: mgLayer.seqPattern,
+                    seqFrameCount: mgLayer.seqFrameCount,
+                    seqLocalStart: mgLayer.seqLocalStart + localAdj,
+                    seqTileW: mgLayer.tileW,
+                    seqTileH: mgLayer.tileH,
+                });
+            } else {
+                const mg = mgOverlays[mgLayer.mgIndex];
+                if (!mg) continue;
+                const mgStartTime = mg.startTime || 0;
+                const mgDuration = mg.duration || 3;
+                const absStart = Math.round(mgStartTime * fps);
+                const absEnd = Math.round((mgStartTime + mgDuration) * fps);
+                const clippedStart = Math.max(absStart, frameOffset);
+                const localAdj = clippedStart - absStart;
+
+                addLayer({
+                    type: 'imageSequence',
+                    startFrame: absStart,
+                    endFrame: absEnd,
+                    trackNum: 3,
+                    opacity: 1.0,
+                    fitMode: 'contain',
+                    seqDir: mgLayer.seqDir,
+                    seqPattern: mgLayer.seqPattern,
+                    seqFrameCount: mgLayer.seqFrameCount,
+                    seqLocalStart: mgLayer.seqLocalStart + localAdj,
+                    seqTileW: mgLayer.tileW,
+                    seqTileH: mgLayer.tileH,
+                });
+            }
+        }
+
+        console.log(`[NativeExport] RenderPlan: ${width}x${height} @ ${fps}fps, ${totalFrames} frames, ${layers.length} layers (1 bg + ${imageScenes.length} images + ${videoScenes.length} videos + ${mgLayers.length} MGs)`);
+
+        // ── Call native compose IPC ───────────────────────────────
+        const result = await window.electronAPI.nativeComposeExport({
+            width, height, fps, totalFrames, layers,
+            audioTrimStartSec: renderInSec > 0 ? renderInSec : undefined,
+            audioTrimEndSec: renderOutSec < fullDuration ? renderOutSec : undefined,
         });
 
         if (!result.ok) {
+            console.error('[NativeExport] Failed:', result.reason);
             showToast(`Native export failed: ${result.reason}`, 'error');
-            return { success: false };
+            return { success: false, error: result.reason || 'Native compose failed' };
         }
 
         return {
@@ -5383,8 +5689,9 @@ async function renderVideoNative() {
             stats: { frames: result.frames, elapsed: result.elapsed, fps: result.fps }
         };
     } catch (err) {
+        console.error('[NativeExport] Error:', err);
         showToast(`Native export error: ${err.message}`, 'error');
-        return { success: false };
+        return { success: false, error: err.message };
     }
 }
 
@@ -6104,7 +6411,7 @@ function resetCurrentProject() {
     state.selectedClipIndices = [];
 
     [elements.videoTrack1, elements.videoTrack2, elements.videoTrack3,
-     elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B].forEach(video => {
+    elements.videoTrack1B, elements.videoTrack2B, elements.videoTrack3B].forEach(video => {
         if (video) {
             video.pause();
             video.currentTime = 0;

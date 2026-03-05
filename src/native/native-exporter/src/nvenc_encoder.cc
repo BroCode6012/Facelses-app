@@ -8,20 +8,25 @@
 
 namespace nativeexporter {
 
-static void* s_encoder = nullptr; // NVENC encoder handle
-static ID3D11Texture2D* s_inputTexture = nullptr;
-static NV_ENC_REGISTERED_PTR s_registeredResource = nullptr;
+static void* s_encoder = nullptr;
 static std::string s_lastError;
 static EncoderConfig s_config;
 static uint64_t s_frameIndex = 0;
 static bool s_initialized = false;
+static bool s_verbose = true;  // verbose logging (init only by default after first frame)
+
+// Multi-slot input textures + registered resources
+static ID3D11Texture2D*       s_inputTextures[MAX_INFLIGHT_SLOTS] = {};
+static NV_ENC_REGISTERED_PTR  s_registeredResources[MAX_INFLIGHT_SLOTS] = {};
+static bool                   s_slotIsNV12[MAX_INFLIGHT_SLOTS] = {};
+static int                    s_numSlots = 0;
 
 // Ring of output bitstream buffers (needed for B-frame reordering)
 static const int MAX_OUTPUT_BUFFERS = 16;
 static NV_ENC_OUTPUT_PTR s_bitstreamBuffers[MAX_OUTPUT_BUFFERS] = {};
 static int s_numBuffers = 0;
-static int s_sendIdx = 0;  // total frames submitted (monotonic)
-static int s_readIdx = 0;  // total frames read out (monotonic)
+static int s_sendIdx = 0;
+static int s_readIdx = 0;
 
 static const char* nvencStatusStr(NVENCSTATUS s) {
     switch (s) {
@@ -72,8 +77,10 @@ static const GUID& getPresetGuid(uint32_t preset) {
 static NV_ENC_PARAMS_RC_MODE getRcMode(const std::string& rc) {
     if (rc == "cbr") return NV_ENC_PARAMS_RC_CBR;
     if (rc == "cbr_hq") return NV_ENC_PARAMS_RC_CBR;
-    return NV_ENC_PARAMS_RC_VBR; // default
+    return NV_ENC_PARAMS_RC_VBR;
 }
+
+void setVerboseLogging(bool v) { s_verbose = v; }
 
 bool openSession(ID3D11Device* device) {
     if (s_encoder) return true;
@@ -83,25 +90,16 @@ bool openSession(ID3D11Device* device) {
     s_numBuffers = 0;
     s_sendIdx = 0;
     s_readIdx = 0;
-    s_registeredResource = nullptr;
-    s_inputTexture = nullptr;
+    for (int i = 0; i < MAX_INFLIGHT_SLOTS; i++) {
+        s_inputTextures[i] = nullptr;
+        s_registeredResources[i] = nullptr;
+        s_slotIsNV12[i] = false;
+    }
+    s_numSlots = 0;
     s_frameIndex = 0;
 
     auto* fn = getNvencFunctions();
-    if (!fn) {
-        s_lastError = "NVENC function list is null";
-        return false;
-    }
-
-    // Check critical function pointers
-    fprintf(stderr, "[NVENC] === Function Pointer Check ===\n");
-    fprintf(stderr, "[NVENC]   nvEncOpenEncodeSession:   %p\n", (void*)fn->nvEncOpenEncodeSession);
-    fprintf(stderr, "[NVENC]   nvEncOpenEncodeSessionEx: %p\n", (void*)fn->nvEncOpenEncodeSessionEx);
-    fprintf(stderr, "[NVENC]   nvEncGetEncodeGUIDCount:  %p\n", (void*)fn->nvEncGetEncodeGUIDCount);
-    fprintf(stderr, "[NVENC]   nvEncInitializeEncoder:   %p\n", (void*)fn->nvEncInitializeEncoder);
-    fprintf(stderr, "[NVENC]   nvEncEncodePicture:       %p\n", (void*)fn->nvEncEncodePicture);
-    fprintf(stderr, "[NVENC]   nvEncDestroyEncoder:      %p\n", (void*)fn->nvEncDestroyEncoder);
-    fprintf(stderr, "[NVENC]   nvEncRegisterResource:    %p\n", (void*)fn->nvEncRegisterResource);
+    if (!fn) { s_lastError = "NVENC function list is null"; return false; }
 
     if (!fn->nvEncOpenEncodeSessionEx) {
         s_lastError = "nvEncOpenEncodeSessionEx function pointer is null";
@@ -112,12 +110,8 @@ bool openSession(ID3D11Device* device) {
     uint32_t requestedVersion = NVENCAPI_VERSION;
     uint32_t negotiatedVersion = requestedVersion;
 
-    fprintf(stderr, "[NVENC] maxSupportedVersion=0x%08X\n", maxSupportedVersion);
-    fprintf(stderr, "[NVENC] NVENCAPI_VERSION=0x%08X\n", requestedVersion);
     if (maxSupportedVersion != 0 && requestedVersion > maxSupportedVersion) {
         negotiatedVersion = maxSupportedVersion;
-        fprintf(stderr, "[NVENC] NVENCAPI_VERSION > maxSupportedVersion, using apiVersion=0x%08X\n",
-                negotiatedVersion);
     }
 
     NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS params = {0};
@@ -126,26 +120,13 @@ bool openSession(ID3D11Device* device) {
     params.device = (void*)device;
     params.apiVersion = negotiatedVersion;
 
-    const uint32_t adapterVendorId = getAdapterVendorId();
-    const LUID adapterLuid = getAdapterLuid();
-
-    fprintf(stderr, "[NVENC] === OpenEncodeSessionEx ===\n");
-    fprintf(stderr, "[NVENC]   sizeof(params)=%zu\n", sizeof(params));
-    fprintf(stderr, "[NVENC]   version=0x%08X\n", params.version);
-    fprintf(stderr, "[NVENC]   apiVersion=0x%08X\n", params.apiVersion);
-    fprintf(stderr, "[NVENC]   deviceType=%d\n", (int)params.deviceType);
-    fprintf(stderr, "[NVENC]   device=%p (ID3D11Device*)\n", params.device);
-    fprintf(stderr, "[NVENC]   adapterVendorId=0x%04X\n", adapterVendorId);
-    fprintf(stderr, "[NVENC]   adapterLuid=%08X:%08X\n", adapterLuid.HighPart, adapterLuid.LowPart);
-    fprintf(stderr, "[NVENC]   Process: %s-bit\n", sizeof(void*) == 8 ? "64" : "32");
+    fprintf(stderr, "[NVENC] Opening session (apiVersion=0x%08X)...\n", negotiatedVersion);
 
     NVENCSTATUS st = fn->nvEncOpenEncodeSessionEx(&params, &s_encoder);
-    fprintf(stderr, "[NVENC]   result: %s (%u) encoder=%p\n",
-            nvencStatusStr(st), st, s_encoder);
+    fprintf(stderr, "[NVENC] Session: %s (%u) encoder=%p\n", nvencStatusStr(st), st, s_encoder);
 
     if (st != NV_ENC_SUCCESS) {
-        s_lastError = std::string("nvEncOpenEncodeSessionEx: ") + nvencStatusStr(st) +
-                      " (" + std::to_string(st) + ")";
+        s_lastError = std::string("nvEncOpenEncodeSessionEx: ") + nvencStatusStr(st);
         s_encoder = nullptr;
         return false;
     }
@@ -160,74 +141,75 @@ bool configure(const EncoderConfig& cfg) {
     s_config = cfg;
     s_initialized = false;
 
-    // Get preset config as starting point
+    // Apply speed preset overrides
+    bool isFast = (cfg.speedPreset == "fast");
+    EncoderConfig effectiveCfg = cfg;
+    if (isFast) {
+        effectiveCfg.preset = 1;  // P1 (fastest)
+        effectiveCfg.bframes = 0;
+        effectiveCfg.rc = "vbr";
+        fprintf(stderr, "[NVENC] FAST preset: P1, 0 B-frames, single-pass VBR, no AQ\n");
+    } else {
+        fprintf(stderr, "[NVENC] QUALITY preset: P%u, %u B-frames, %s\n",
+                effectiveCfg.preset, effectiveCfg.bframes, effectiveCfg.rc.c_str());
+    }
+
+    const GUID& presetGuid = getPresetGuid(effectiveCfg.preset);
+
     NV_ENC_PRESET_CONFIG presetConfig = {};
     presetConfig.version = NV_ENC_PRESET_CONFIG_VER;
     presetConfig.presetCfg.version = NV_ENC_CONFIG_VER;
 
-    const GUID& presetGuid = getPresetGuid(cfg.preset);
+    NV_ENC_TUNING_INFO tuningInfo = isFast ? NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY
+                                           : NV_ENC_TUNING_INFO_HIGH_QUALITY;
 
     NVENCSTATUS status = fn->nvEncGetEncodePresetConfigEx(
-        s_encoder,
-        NV_ENC_CODEC_H264_GUID,
-        presetGuid,
-        NV_ENC_TUNING_INFO_HIGH_QUALITY,
-        &presetConfig
-    );
+        s_encoder, NV_ENC_CODEC_H264_GUID, presetGuid,
+        tuningInfo, &presetConfig);
 
     if (status != NV_ENC_SUCCESS) {
-        // Fallback: try without Ex (older drivers)
         status = fn->nvEncGetEncodePresetConfig(
-            s_encoder,
-            NV_ENC_CODEC_H264_GUID,
-            presetGuid,
-            &presetConfig
-        );
+            s_encoder, NV_ENC_CODEC_H264_GUID, presetGuid, &presetConfig);
         if (status != NV_ENC_SUCCESS) {
             s_lastError = "nvEncGetEncodePresetConfig failed: " + std::to_string(status);
             return false;
         }
     }
 
-    // Customize the config
     NV_ENC_CONFIG encConfig = presetConfig.presetCfg;
-
-    // Profile: High
     encConfig.profileGUID = NV_ENC_H264_PROFILE_HIGH_GUID;
+    encConfig.gopLength = effectiveCfg.gop;
+    encConfig.frameIntervalP = effectiveCfg.bframes + 1;
+    encConfig.rcParams.rateControlMode = getRcMode(effectiveCfg.rc);
+    encConfig.rcParams.averageBitRate = effectiveCfg.bitrate;
+    encConfig.rcParams.maxBitRate = effectiveCfg.maxBitrate;
+    encConfig.rcParams.vbvBufferSize = effectiveCfg.maxBitrate;
+    encConfig.rcParams.vbvInitialDelay = effectiveCfg.maxBitrate;
 
-    // GOP + B-frames
-    encConfig.gopLength = cfg.gop;
-    encConfig.frameIntervalP = cfg.bframes + 1; // IBBP = 3
-
-    // Rate control
-    encConfig.rcParams.rateControlMode = getRcMode(cfg.rc);
-    encConfig.rcParams.averageBitRate = cfg.bitrate;
-    encConfig.rcParams.maxBitRate = cfg.maxBitrate;
-    encConfig.rcParams.vbvBufferSize = cfg.maxBitrate; // 1 second buffer
-    encConfig.rcParams.vbvInitialDelay = cfg.maxBitrate; // full buffer at start
-
-    // Spatial AQ
-    encConfig.rcParams.enableAQ = 1;
-    encConfig.rcParams.aqStrength = 0; // 0 = auto
-
-    // Lookahead DISABLED — requires N+bframes+1 output buffers which complicates
-    // the pipeline. Quality difference is minimal for most content.
-    encConfig.rcParams.enableLookahead = 0;
-    encConfig.rcParams.lookaheadDepth = 0;
-
-    // Multi-pass (VBR HQ / CBR HQ use two-pass full resolution)
-    if (cfg.rc == "vbr_hq" || cfg.rc == "cbr_hq") {
-        encConfig.rcParams.multiPass = NV_ENC_TWO_PASS_FULL_RESOLUTION;
+    if (isFast) {
+        // FAST: single pass, no AQ, CAVLC for speed
+        encConfig.rcParams.multiPass = NV_ENC_MULTI_PASS_DISABLED;
+        encConfig.rcParams.enableAQ = 0;
+        encConfig.rcParams.enableLookahead = 0;
+        encConfig.rcParams.lookaheadDepth = 0;
+        encConfig.encodeCodecConfig.h264Config.entropyCodingMode = NV_ENC_H264_ENTROPY_CODING_MODE_CAVLC;
+    } else {
+        // QUALITY: two-pass, AQ, CABAC
+        encConfig.rcParams.enableAQ = 1;
+        encConfig.rcParams.aqStrength = 0;
+        encConfig.rcParams.enableLookahead = 0;
+        encConfig.rcParams.lookaheadDepth = 0;
+        if (effectiveCfg.rc == "vbr_hq" || effectiveCfg.rc == "cbr_hq") {
+            encConfig.rcParams.multiPass = NV_ENC_TWO_PASS_FULL_RESOLUTION;
+        }
+        encConfig.encodeCodecConfig.h264Config.entropyCodingMode = NV_ENC_H264_ENTROPY_CODING_MODE_CABAC;
     }
 
-    // H.264 specific
-    encConfig.encodeCodecConfig.h264Config.idrPeriod = cfg.gop;
-    encConfig.encodeCodecConfig.h264Config.repeatSPSPPS = 1; // SPS/PPS before each IDR
-    encConfig.encodeCodecConfig.h264Config.entropyCodingMode = NV_ENC_H264_ENTROPY_CODING_MODE_CABAC;
-    encConfig.encodeCodecConfig.h264Config.chromaFormatIDC = 1; // 4:2:0
+    encConfig.encodeCodecConfig.h264Config.idrPeriod = effectiveCfg.gop;
+    encConfig.encodeCodecConfig.h264Config.repeatSPSPPS = 1;
+    encConfig.encodeCodecConfig.h264Config.chromaFormatIDC = 1;
     encConfig.encodeCodecConfig.h264Config.level = NV_ENC_LEVEL_AUTOSELECT;
 
-    // Initialize encoder
     NV_ENC_INITIALIZE_PARAMS initParams = {};
     initParams.version = NV_ENC_INITIALIZE_PARAMS_VER;
     initParams.encodeGUID = NV_ENC_CODEC_H264_GUID;
@@ -238,39 +220,35 @@ bool configure(const EncoderConfig& cfg) {
     initParams.darHeight = cfg.height;
     initParams.frameRateNum = cfg.fps;
     initParams.frameRateDen = 1;
-    initParams.enablePTD = 1; // picture type decision by encoder
+    initParams.enablePTD = 1;
     initParams.encodeConfig = &encConfig;
-    initParams.maxEncodeWidth = cfg.width;
-    initParams.maxEncodeHeight = cfg.height;
-    initParams.tuningInfo = NV_ENC_TUNING_INFO_HIGH_QUALITY;
+    initParams.maxEncodeWidth = effectiveCfg.width;
+    initParams.maxEncodeHeight = effectiveCfg.height;
+    initParams.tuningInfo = tuningInfo;
+    initParams.enableEncodeAsync = 0;  // sync mode for D3D11
 
     status = fn->nvEncInitializeEncoder(s_encoder, &initParams);
-    fprintf(stderr, "[NVENC] nvEncInitializeEncoder: %s (%u)\n",
-            nvencStatusStr(status), status);
+    fprintf(stderr, "[NVENC] nvEncInitializeEncoder: %s (%u)\n", nvencStatusStr(status), status);
     if (status != NV_ENC_SUCCESS) {
         s_lastError = "nvEncInitializeEncoder failed: " + std::to_string(status);
         return false;
     }
 
-    // Create ring of bitstream output buffers.
-    // Minimum: frameIntervalP + 1 = bframes + 2 (for B-frame reorder pipeline).
-    // Add +2 safety margin.
-    s_numBuffers = cfg.bframes + 4;
+    // Deeper async depth: more output buffers for pipeline
+    s_numBuffers = effectiveCfg.bframes + 4;
+    if (isFast && s_numBuffers < 8) s_numBuffers = 8; // deeper pipeline for FAST
     if (s_numBuffers > MAX_OUTPUT_BUFFERS) s_numBuffers = MAX_OUTPUT_BUFFERS;
 
-    fprintf(stderr, "[NVENC] Creating %d output bitstream buffers (bframes=%u)\n",
-            s_numBuffers, cfg.bframes);
+    fprintf(stderr, "[NVENC] Creating %d output bitstream buffers (bframes=%u, preset=%s)\n",
+            s_numBuffers, effectiveCfg.bframes, isFast ? "fast" : "quality");
 
     for (int i = 0; i < s_numBuffers; i++) {
         NV_ENC_CREATE_BITSTREAM_BUFFER bsParams = {};
         bsParams.version = NV_ENC_CREATE_BITSTREAM_BUFFER_VER;
 
         status = fn->nvEncCreateBitstreamBuffer(s_encoder, &bsParams);
-        fprintf(stderr, "[NVENC] nvEncCreateBitstreamBuffer[%d]: %s (%u) bitstream=%p\n",
-                i, nvencStatusStr(status), status, bsParams.bitstreamBuffer);
         if (status != NV_ENC_SUCCESS) {
-            s_lastError = "nvEncCreateBitstreamBuffer[" + std::to_string(i) + "] failed: " + std::to_string(status);
-            // Destroy any already-created buffers
+            s_lastError = "nvEncCreateBitstreamBuffer[" + std::to_string(i) + "] failed";
             for (int j = 0; j < i; j++) {
                 fn->nvEncDestroyBitstreamBuffer(s_encoder, s_bitstreamBuffers[j]);
                 s_bitstreamBuffers[j] = nullptr;
@@ -281,7 +259,6 @@ bool configure(const EncoderConfig& cfg) {
         s_bitstreamBuffers[i] = bsParams.bitstreamBuffer;
     }
 
-    s_registeredResource = nullptr;
     s_frameIndex = 0;
     s_sendIdx = 0;
     s_readIdx = 0;
@@ -290,20 +267,68 @@ bool configure(const EncoderConfig& cfg) {
     return true;
 }
 
-bool registerTexture(ID3D11Texture2D* texture) {
-    if (!s_encoder || !s_initialized || !texture || s_numBuffers == 0) {
-        s_lastError = "No encoder or texture";
+// ============================================================================
+// Slot registration
+// ============================================================================
+
+bool registerTextureSlot(int slot, ID3D11Texture2D* texture, bool nv12) {
+    if (!s_encoder || !s_initialized || !texture || slot < 0 || slot >= MAX_INFLIGHT_SLOTS) {
+        s_lastError = "Invalid slot or encoder not ready";
         return false;
     }
 
-    s_inputTexture = texture;
-    s_registeredResource = nullptr;
-    fprintf(stderr, "[NVENC] registerTexture: cached texture=%p\n", (void*)s_inputTexture);
+    auto* fn = getNvencFunctions();
 
+    // Unregister old resource if any
+    if (s_registeredResources[slot]) {
+        fn->nvEncUnregisterResource(s_encoder, s_registeredResources[slot]);
+        s_registeredResources[slot] = nullptr;
+    }
+
+    // Register the texture
+    NV_ENC_REGISTER_RESOURCE regParams = {};
+    regParams.version = NV_ENC_REGISTER_RESOURCE_VER;
+    regParams.resourceType = NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX;
+    regParams.resourceToRegister = texture;
+    regParams.width = s_config.width;
+    regParams.height = s_config.height;
+    regParams.pitch = 0;
+    regParams.bufferFormat = nv12 ? NV_ENC_BUFFER_FORMAT_NV12 : NV_ENC_BUFFER_FORMAT_ARGB;
+    regParams.bufferUsage = NV_ENC_INPUT_IMAGE;
+
+    NVENCSTATUS st = fn->nvEncRegisterResource(s_encoder, &regParams);
+    if (st != NV_ENC_SUCCESS) {
+        s_lastError = "nvEncRegisterResource slot[" + std::to_string(slot) + "] failed: " + nvencStatusStr(st);
+        fprintf(stderr, "[NVENC] RegisterResource slot[%d]: %s (%u)\n", slot, nvencStatusStr(st), st);
+        return false;
+    }
+
+    s_inputTextures[slot] = texture;
+    s_registeredResources[slot] = regParams.registeredResource;
+    s_slotIsNV12[slot] = nv12;
+
+    if (slot >= s_numSlots) s_numSlots = slot + 1;
+
+    fprintf(stderr, "[NVENC] Registered slot[%d]: tex=%p fmt=%s resource=%p\n",
+            slot, (void*)texture, nv12 ? "NV12" : "ARGB", regParams.registeredResource);
     return true;
 }
 
-// Write a single frame's bitstream data from a lock result
+// Legacy single-slot wrappers
+bool registerTexture(ID3D11Texture2D* texture) {
+    return registerTextureSlot(0, texture, false);
+}
+
+bool registerTextureNV12(ID3D11Texture2D* texture) {
+    return registerTextureSlot(0, texture, true);
+}
+
+int getRegisteredSlotCount() { return s_numSlots; }
+
+// ============================================================================
+// Bitstream helpers
+// ============================================================================
+
 static bool writeBitstream(NV_ENC_LOCK_BITSTREAM& lockParams, FILE* outFile) {
     if (lockParams.bitstreamSizeInBytes > 0 && lockParams.bitstreamBufferPtr) {
         size_t written = fwrite(lockParams.bitstreamBufferPtr, 1, lockParams.bitstreamSizeInBytes, outFile);
@@ -315,8 +340,6 @@ static bool writeBitstream(NV_ENC_LOCK_BITSTREAM& lockParams, FILE* outFile) {
     return true;
 }
 
-// Drain all pending output frames from s_readIdx up to (but not including) endIdx.
-// Each pending frame has its encoded data in s_bitstreamBuffers[idx % s_numBuffers].
 static bool drainPending(FILE* outFile, int endIdx) {
     auto* fn = getNvencFunctions();
     while (s_readIdx < endIdx) {
@@ -327,21 +350,13 @@ static bool drainPending(FILE* outFile, int endIdx) {
         lockParams.outputBitstream = s_bitstreamBuffers[bufIdx];
 
         NVENCSTATUS lockStatus = fn->nvEncLockBitstream(s_encoder, &lockParams);
-        fprintf(stderr, "[NVENC] nvEncLockBitstream(drain buf[%d] frame=%d): %s (%u) bytes=%u\n",
-                bufIdx, s_readIdx, nvencStatusStr(lockStatus), lockStatus,
-                lockParams.bitstreamSizeInBytes);
-
         if (lockStatus != NV_ENC_SUCCESS) {
             s_lastError = "nvEncLockBitstream(drain) failed: " + std::to_string(lockStatus);
             return false;
         }
 
         bool ok = writeBitstream(lockParams, outFile);
-        NVENCSTATUS unlockStatus = fn->nvEncUnlockBitstream(s_encoder, s_bitstreamBuffers[bufIdx]);
-        if (unlockStatus != NV_ENC_SUCCESS) {
-            s_lastError = "nvEncUnlockBitstream(drain) failed: " + std::to_string(unlockStatus);
-            return false;
-        }
+        fn->nvEncUnlockBitstream(s_encoder, s_bitstreamBuffers[bufIdx]);
         if (!ok) return false;
 
         s_readIdx++;
@@ -349,54 +364,33 @@ static bool drainPending(FILE* outFile, int endIdx) {
     return true;
 }
 
-bool encodeFrame(FILE* outFile) {
-    const bool hasEncoder = (s_encoder != nullptr);
-    const bool hasReady = s_initialized;
-    const bool hasBuffers = (s_numBuffers > 0);
-    const bool hasTexture = (s_inputTexture != nullptr);
-    if (!hasEncoder || !hasReady || !hasBuffers || !hasTexture) {
-        fprintf(stderr,
-                "[NVENC] encodeFrame precheck failed: encoder=%d initialized=%d buffers=%d texture=%d\n",
-                hasEncoder ? 1 : 0, hasReady ? 1 : 0, hasBuffers ? 1 : 0, hasTexture ? 1 : 0);
-        s_lastError = "Encoder not fully initialized";
+// ============================================================================
+// Encode from specific slot
+// ============================================================================
+
+bool encodeFrameSlot(int slot, FILE* outFile) {
+    if (!s_encoder || !s_initialized || s_numBuffers == 0) {
+        s_lastError = "Encoder not initialized";
         return false;
     }
-    auto* fn = getNvencFunctions();
-    if (!fn) {
-        s_lastError = "NVENC function list is null";
-        return false;
-    }
-    if (!s_registeredResource) {
-        NV_ENC_REGISTER_RESOURCE regParams = {};
-        regParams.version = NV_ENC_REGISTER_RESOURCE_VER;
-        regParams.resourceType = NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX;
-        regParams.resourceToRegister = s_inputTexture;
-        regParams.width = s_config.width;
-        regParams.height = s_config.height;
-        regParams.pitch = 0;
-        regParams.bufferFormat = NV_ENC_BUFFER_FORMAT_ARGB;
-        regParams.bufferUsage = NV_ENC_INPUT_IMAGE;
-        NVENCSTATUS regStatus = fn->nvEncRegisterResource(s_encoder, &regParams);
-        fprintf(stderr, "[NVENC] nvEncRegisterResource: %s (%u) resource=%p\n",
-                nvencStatusStr(regStatus), regStatus, regParams.registeredResource);
-        if (regStatus != NV_ENC_SUCCESS) {
-            s_lastError = "nvEncRegisterResource failed: " + std::to_string(regStatus);
-            return false;
-        }
-        s_registeredResource = regParams.registeredResource;
-    }
-    NV_ENC_MAP_INPUT_RESOURCE mapParams = {};
-    mapParams.version = NV_ENC_MAP_INPUT_RESOURCE_VER;
-    mapParams.registeredResource = s_registeredResource;
-    NVENCSTATUS status = fn->nvEncMapInputResource(s_encoder, &mapParams);
-    fprintf(stderr, "[NVENC] nvEncMapInputResource: %s (%u) mapped=%p\n",
-            nvencStatusStr(status), status, mapParams.mappedResource);
-    if (status != NV_ENC_SUCCESS) {
-        s_lastError = "nvEncMapInputResource failed: " + std::to_string(status);
+    if (slot < 0 || slot >= s_numSlots || !s_registeredResources[slot]) {
+        s_lastError = "Invalid slot " + std::to_string(slot);
         return false;
     }
 
-    // Pick the next output buffer in the ring
+    auto* fn = getNvencFunctions();
+
+    // Map the slot's registered resource
+    NV_ENC_MAP_INPUT_RESOURCE mapParams = {};
+    mapParams.version = NV_ENC_MAP_INPUT_RESOURCE_VER;
+    mapParams.registeredResource = s_registeredResources[slot];
+
+    NVENCSTATUS status = fn->nvEncMapInputResource(s_encoder, &mapParams);
+    if (status != NV_ENC_SUCCESS) {
+        s_lastError = "nvEncMapInputResource slot[" + std::to_string(slot) + "] failed";
+        return false;
+    }
+
     int bufIdx = s_sendIdx % s_numBuffers;
 
     NV_ENC_PIC_PARAMS picParams = {};
@@ -413,70 +407,77 @@ bool encodeFrame(FILE* outFile) {
     picParams.bufferFmt = mapParams.mappedBufferFmt;
     picParams.pictureStruct = NV_ENC_PIC_STRUCT_FRAME;
     picParams.pictureType = NV_ENC_PIC_TYPE_UNKNOWN;
+
     status = fn->nvEncEncodePicture(s_encoder, &picParams);
-    fprintf(stderr, "[NVENC] nvEncEncodePicture(frame=%llu buf[%d]): %s (%u) flags=0x%08X\n",
-            (unsigned long long)s_frameIndex, bufIdx, nvencStatusStr(status), status, picParams.encodePicFlags);
     fn->nvEncUnmapInputResource(s_encoder, mapParams.mappedResource);
 
     s_sendIdx++;
     s_frameIndex++;
 
     if (status == NV_ENC_SUCCESS) {
-        // Output is ready for one or more pending frames — drain them all
         return drainPending(outFile, s_sendIdx);
     } else if (status == NV_ENC_ERR_NEED_MORE_INPUT) {
-        // Frame queued internally for B-frame reordering, no output yet
         return true;
     } else {
-        s_lastError = "nvEncEncodePicture failed: " + std::to_string(status);
+        s_lastError = std::string("nvEncEncodePicture failed: ") + nvencStatusStr(status);
         return false;
     }
 }
 
+// Legacy: encode from slot 0
+bool encodeFrame(FILE* outFile) {
+    // Legacy path: if no slots registered, do lazy registration (backward compat)
+    if (s_numSlots == 0 && s_inputTextures[0] == nullptr) {
+        s_lastError = "No input texture registered";
+        return false;
+    }
+    return encodeFrameSlot(0, outFile);
+}
+
+// ============================================================================
+// Flush + Close
+// ============================================================================
+
 bool flush(FILE* outFile) {
-    fprintf(stderr, "[NVENC] flush() ENTER enc=%p numBuffers=%d sendIdx=%d readIdx=%d frameIndex=%u\n",
-            s_encoder, s_numBuffers, s_sendIdx, s_readIdx, (unsigned)s_frameIndex);
+    fprintf(stderr, "[NVENC] flush() sendIdx=%d readIdx=%d frameIndex=%u\n",
+            s_sendIdx, s_readIdx, (unsigned)s_frameIndex);
 
     if (!s_encoder) return true;
 
     auto* fn = getNvencFunctions();
-    if (!fn) {
-        s_lastError = "NVENC function list is null";
-        return false;
-    }
-    if (s_numBuffers == 0) {
+    if (!fn || s_numBuffers == 0) {
         s_lastError = "No bitstream buffers for flush";
         return false;
     }
 
-    // Send EOS signal — no output buffer needed, this just tells NVENC
-    // to finish encoding all buffered frames.
     NV_ENC_PIC_PARAMS eosParams = {};
     eosParams.version = NV_ENC_PIC_PARAMS_VER;
     eosParams.encodePicFlags = NV_ENC_PIC_FLAG_EOS;
 
     NVENCSTATUS encodeStatus = fn->nvEncEncodePicture(s_encoder, &eosParams);
-    fprintf(stderr, "[NVENC] nvEncEncodePicture(EOS): %s (%u)\n",
-            nvencStatusStr(encodeStatus), encodeStatus);
+    fprintf(stderr, "[NVENC] EOS: %s, draining %d pending\n",
+            nvencStatusStr(encodeStatus), s_sendIdx - s_readIdx);
+
     if (encodeStatus != NV_ENC_SUCCESS && encodeStatus != NV_ENC_ERR_NEED_MORE_INPUT) {
-        s_lastError = "nvEncEncodePicture(EOS) failed: " + std::to_string(encodeStatus);
+        s_lastError = "nvEncEncodePicture(EOS) failed";
         return false;
     }
 
-    // After EOS, all pending frames (s_readIdx..s_sendIdx) have their encoded
-    // data ready in their respective bitstream buffers. Drain them all.
-    fprintf(stderr, "[NVENC] flush: draining %d pending frames\n", s_sendIdx - s_readIdx);
     return drainPending(outFile, s_sendIdx);
 }
 
 void closeSession() {
     if (!s_encoder) {
-        s_inputTexture = nullptr;
+        for (int i = 0; i < MAX_INFLIGHT_SLOTS; i++) {
+            s_inputTextures[i] = nullptr;
+            s_registeredResources[i] = nullptr;
+            s_slotIsNV12[i] = false;
+        }
+        s_numSlots = 0;
         for (int i = 0; i < MAX_OUTPUT_BUFFERS; i++) s_bitstreamBuffers[i] = nullptr;
         s_numBuffers = 0;
         s_sendIdx = 0;
         s_readIdx = 0;
-        s_registeredResource = nullptr;
         s_initialized = false;
         s_frameIndex = 0;
         return;
@@ -485,24 +486,21 @@ void closeSession() {
     auto* fn = getNvencFunctions();
     if (!fn) {
         s_encoder = nullptr;
-        s_inputTexture = nullptr;
-        for (int i = 0; i < MAX_OUTPUT_BUFFERS; i++) s_bitstreamBuffers[i] = nullptr;
-        s_numBuffers = 0;
-        s_sendIdx = 0;
-        s_readIdx = 0;
-        s_registeredResource = nullptr;
-        s_initialized = false;
-        s_frameIndex = 0;
         return;
     }
 
-    // Unregister resource
-    if (s_registeredResource) {
-        fn->nvEncUnregisterResource(s_encoder, s_registeredResource);
-        s_registeredResource = nullptr;
+    // Unregister all slot resources
+    for (int i = 0; i < MAX_INFLIGHT_SLOTS; i++) {
+        if (s_registeredResources[i]) {
+            fn->nvEncUnregisterResource(s_encoder, s_registeredResources[i]);
+            s_registeredResources[i] = nullptr;
+        }
+        s_inputTextures[i] = nullptr;
+        s_slotIsNV12[i] = false;
     }
+    s_numSlots = 0;
 
-    // Destroy all bitstream buffers
+    // Destroy bitstream buffers
     for (int i = 0; i < s_numBuffers; i++) {
         if (s_bitstreamBuffers[i]) {
             fn->nvEncDestroyBitstreamBuffer(s_encoder, s_bitstreamBuffers[i]);
@@ -513,20 +511,13 @@ void closeSession() {
     s_sendIdx = 0;
     s_readIdx = 0;
 
-    // Destroy encoder
     fn->nvEncDestroyEncoder(s_encoder);
     s_encoder = nullptr;
-    s_inputTexture = nullptr;
     s_initialized = false;
     s_frameIndex = 0;
 }
 
-bool isSessionOpen() {
-    return s_encoder != nullptr;
-}
-
-std::string getLastError() {
-    return s_lastError;
-}
+bool isSessionOpen() { return s_encoder != nullptr; }
+std::string getLastError() { return s_lastError; }
 
 } // namespace nativeexporter

@@ -17,6 +17,11 @@ struct LoadedTexture {
 // Returns true on success. Caller owns the resources (release via releaseTexture).
 bool loadImageWIC(ID3D11Device* device, const std::string& path, LoadedTexture& out);
 
+// Update an existing DEFAULT-usage texture with pixels from a new image file.
+// Texture must match expectedW x expectedH. Used for per-frame imageSequence updates.
+bool updateTextureWIC(ID3D11DeviceContext* ctx, const std::string& path,
+                      ID3D11Texture2D* texture, uint32_t expectedW, uint32_t expectedH);
+
 void releaseTexture(LoadedTexture& tex);
 
 } // namespace nativeexporter

@@ -1555,4 +1555,12 @@ module.exports = {
     canRenderWithCanvas,
     REMOTION_ONLY_TYPES,
     CANVAS_RENDERERS,
+    // Shared utilities for mg-png-renderer.js (Phase 4B)
+    getCanvasModule,
+    computeAnimationState,
+    springValue,
+    interpolate,
+    easeOutCubic,
+    CANVAS_POS,
+    getAnchor,
 };

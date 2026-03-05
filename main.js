@@ -2079,13 +2079,25 @@ async function _webglMuxAudio(exp) {
         return dest;
     }
 
-    // Mux video + audio using FFmpeg
-    console.log('[WebGL Export] Muxing audio:', audioFile);
+    // Mux video + audio using FFmpeg (with optional audio trim for in/out points)
+    const audioInputArgs = [];
+    if (exp.audioTrimStartSec != null && exp.audioTrimStartSec > 0) {
+        audioInputArgs.push('-ss', String(exp.audioTrimStartSec));
+    }
+    if (exp.audioTrimEndSec != null) {
+        audioInputArgs.push('-to', String(exp.audioTrimEndSec));
+    }
+    audioInputArgs.push('-i', audioFile);
+
+    const trimLog = (exp.audioTrimStartSec || exp.audioTrimEndSec) ?
+        ` (trim: ${exp.audioTrimStartSec || 0}s → ${exp.audioTrimEndSec || 'end'})` : '';
+    console.log('[WebGL Export] Muxing audio:', audioFile + trimLog);
+
     return new Promise((resolve, reject) => {
         const muxProc = spawn(WEBGL_FFMPEG_PATH, [
             '-y',
             '-i', exp.videoFile,
-            '-i', audioFile,
+            ...audioInputArgs,
             '-c:v', 'copy',        // No re-encode of video
             '-c:a', 'aac', '-b:a', '192k',
             '-shortest',
@@ -2459,7 +2471,7 @@ ipcMain.handle('native-export-start', async (event, opts) => {
         });
 
         // 3. Mux audio (reuse existing _webglMuxAudio pattern)
-        const exp = { videoFile, outputFile };
+        const exp = { videoFile, outputFile, audioTrimStartSec: opts.audioTrimStartSec, audioTrimEndSec: opts.audioTrimEndSec };
         const finalOutput = await _webglMuxAudio(exp);
 
         // Clean up .h264 temp file
@@ -2489,6 +2501,11 @@ ipcMain.handle('native-compose-export', async (event, opts) => {
         if (!fs.existsSync(TEMP_PATH)) fs.mkdirSync(TEMP_PATH, { recursive: true });
 
         console.log(`[NativeCompose] Starting: ${width}x${height} @ ${fps}fps, ${totalFrames} frames, ${layers.length} layers`);
+        // Log layer summary for debugging
+        for (let i = 0; i < layers.length; i++) {
+            const l = layers[i];
+            console.log(`[NativeCompose]   layer[${i}] type=${l.type} frames=${l.startFrame}-${l.endFrame} track=${l.trackNum}${l.mediaPath ? ' path=' + l.mediaPath : ''}${l.seqDir ? ' seqDir=' + l.seqDir : ''}`);
+        }
 
         const encResult = _nativeExporterAddon.composeAndEncode({
             width, height, fps, totalFrames, layers,
@@ -2523,8 +2540,12 @@ ipcMain.handle('native-compose-export', async (event, opts) => {
             wrapProc.on('error', reject);
         });
 
-        // Mux audio
-        const finalOutput = await _webglMuxAudio({ videoFile, outputFile });
+        // Mux audio (with in/out trim if specified)
+        const finalOutput = await _webglMuxAudio({
+            videoFile, outputFile,
+            audioTrimStartSec: opts.audioTrimStartSec,
+            audioTrimEndSec: opts.audioTrimEndSec,
+        });
 
         try { fs.unlinkSync(h264File); } catch (_) {}
 
@@ -2541,6 +2562,23 @@ ipcMain.handle('native-export-cancel', async () => {
         try { _nativeExporterAddon.cancel(); } catch (_) {}
     }
     return { ok: true };
+});
+
+ipcMain.handle('pre-render-mgs-png', async (event, opts) => {
+    try {
+        const { renderMGsToPNG } = require('./src/mg-png-renderer');
+        const cacheDir = path.join(TEMP_PATH, 'mg-png-cache');
+        const result = await renderMGsToPNG(opts, cacheDir, (pct, msg) => {
+            console.log(`[PreRenderMG] ${pct}% ${msg}`);
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('export-progress', { percent: pct, message: msg });
+            }
+        });
+        return { ok: true, layers: result.layers };
+    } catch (err) {
+        console.error('[PreRenderMG] Error:', err.message);
+        return { ok: false, reason: err.message };
+    }
 });
 
 // Open output folder

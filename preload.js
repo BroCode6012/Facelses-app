@@ -227,6 +227,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     nativeExportStart: (opts) => ipcRenderer.invoke('native-export-start', opts),
     nativeComposeExport: (opts) => ipcRenderer.invoke('native-compose-export', opts),
     nativeExportCancel: () => ipcRenderer.invoke('native-export-cancel'),
+    preRenderMGsPNG: (opts) => ipcRenderer.invoke('pre-render-mgs-png', opts),
 });
 
 console.log('✅ Electron preload script loaded');

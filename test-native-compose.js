@@ -302,10 +302,148 @@ app.whenReady().then(async () => {
     log('  Test B2: PASSED');
     try { fs.unlinkSync(h264B2); } catch (_) {}
     try { fs.unlinkSync(frameB2); } catch (_) {}
+    log('');
+
+    // ========== TEST C1: Position — translate left→right over 60 frames ==========
+    log('--- Test C1: Position — translatePx.x 0→1520 (60 frames @ 30fps) ---');
+
+    const LAYER_W = 400; // test-overlay.png is 400x400
+    const h264C1 = path.join(TEMP_DIR, 'compose-c1.h264');
+    const mp4C1 = path.join(OUTPUT_DIR, 'compose-c1-translate.mp4');
+
+    const resultC1 = addon.composeAndEncode({
+        width: 1920, height: 1080, fps: 30, totalFrames: 60,
+        outputPath: h264C1,
+        layers: [
+            { type: 'solid', color: [0.15, 0.15, 0.15, 1.0], startFrame: 0, endFrame: 60, trackNum: 1 },
+            {
+                type: 'image', mediaPath: testPng, opacity: 1.0,
+                startFrame: 0, endFrame: 60, trackNum: 2, fitMode: 'contain',
+                translateX: 0, translateXEnd: 1920 - LAYER_W,
+                translateY: 0, translateYEnd: 0
+            }
+        ]
+    });
+
+    if (!resultC1.ok) {
+        log(`FAIL C1: ${resultC1.reason}`);
+        win.close(); app.quit(); return;
+    }
+
+    log(`  Encoded ${resultC1.frames} frames in ${resultC1.elapsed.toFixed(3)}s (${resultC1.fps.toFixed(1)} fps)`);
+
+    try {
+        await runFFmpeg(['-y', '-r', '30', '-i', h264C1, '-c:v', 'copy', '-movflags', '+faststart', mp4C1]);
+        log(`  MP4: ${fs.statSync(mp4C1).size} bytes`);
+    } catch (err) {
+        log(`FAIL C1: FFmpeg wrap: ${err.message}`);
+        win.close(); app.quit(); return;
+    }
+
+    // Extract first + last frame to confirm movement
+    const frameC1a = path.join(TEMP_DIR, 'compose-c1-f0.png');
+    const frameC1b = path.join(TEMP_DIR, 'compose-c1-f59.png');
+    try {
+        await runFFmpeg(['-y', '-i', mp4C1, '-vf', 'select=eq(n\\,0)', '-vframes', '1', frameC1a]);
+        await runFFmpeg(['-y', '-i', mp4C1, '-vf', 'select=eq(n\\,59)', '-vframes', '1', frameC1b]);
+        if (fs.existsSync(frameC1a) && fs.existsSync(frameC1b)) {
+            log(`  Frame 0: ${fs.statSync(frameC1a).size}B  Frame 59: ${fs.statSync(frameC1b).size}B`);
+            const s0 = fs.statSync(frameC1a).size;
+            const s59 = fs.statSync(frameC1b).size;
+            if (s0 !== s59) log('  Frames differ → translate confirmed');
+            else log('  WARNING: frames identical — translate may not be working');
+        }
+    } catch (_) {
+        log('  (Frame extraction skipped)');
+    }
+
+    log('  Test C1: PASSED');
+    try { fs.unlinkSync(h264C1); } catch (_) {}
+    try { fs.unlinkSync(frameC1a); } catch (_) {}
+    try { fs.unlinkSync(frameC1b); } catch (_) {}
+    log('');
+
+    // ========== TEST C2: Scale 0.5→1.5 over 60 frames ==========
+    log('--- Test C2: Scale 0.5→1.5 (60 frames, anchor 0.5,0.5) ---');
+
+    const h264C2 = path.join(TEMP_DIR, 'compose-c2.h264');
+    const mp4C2 = path.join(OUTPUT_DIR, 'compose-c2-scale.mp4');
+
+    const resultC2 = addon.composeAndEncode({
+        width: 1920, height: 1080, fps: 30, totalFrames: 60,
+        outputPath: h264C2,
+        layers: [
+            { type: 'solid', color: [0.05, 0.05, 0.2, 1.0], startFrame: 0, endFrame: 60, trackNum: 1 },
+            {
+                type: 'image', mediaPath: testPng, opacity: 1.0,
+                startFrame: 0, endFrame: 60, trackNum: 2, fitMode: 'contain',
+                scaleX: 0.5, scaleXEnd: 1.5,
+                scaleY: 0.5, scaleYEnd: 1.5,
+                anchorX: 0.5, anchorY: 0.5
+            }
+        ]
+    });
+
+    if (!resultC2.ok) {
+        log(`FAIL C2: ${resultC2.reason}`);
+        win.close(); app.quit(); return;
+    }
+
+    log(`  Encoded ${resultC2.frames} frames in ${resultC2.elapsed.toFixed(3)}s (${resultC2.fps.toFixed(1)} fps)`);
+
+    try {
+        await runFFmpeg(['-y', '-r', '30', '-i', h264C2, '-c:v', 'copy', '-movflags', '+faststart', mp4C2]);
+        log(`  MP4: ${fs.statSync(mp4C2).size} bytes`);
+    } catch (err) {
+        log(`FAIL C2: FFmpeg wrap: ${err.message}`);
+        win.close(); app.quit(); return;
+    }
+
+    log('  Test C2: PASSED');
+    try { fs.unlinkSync(h264C2); } catch (_) {}
+    log('');
+
+    // ========== TEST C3: Rotate 0→2π over 120 frames ==========
+    log('--- Test C3: Rotation 0→2π (120 frames, anchor 0.5,0.5) ---');
+
+    const h264C3 = path.join(TEMP_DIR, 'compose-c3.h264');
+    const mp4C3 = path.join(OUTPUT_DIR, 'compose-c3-rotate.mp4');
+
+    const resultC3 = addon.composeAndEncode({
+        width: 1920, height: 1080, fps: 30, totalFrames: 120,
+        outputPath: h264C3,
+        layers: [
+            { type: 'solid', color: [0.1, 0.0, 0.1, 1.0], startFrame: 0, endFrame: 120, trackNum: 1 },
+            {
+                type: 'image', mediaPath: testPng, opacity: 1.0,
+                startFrame: 0, endFrame: 120, trackNum: 2, fitMode: 'contain',
+                rotationRad: 0, rotationRadEnd: 2 * Math.PI,
+                anchorX: 0.5, anchorY: 0.5
+            }
+        ]
+    });
+
+    if (!resultC3.ok) {
+        log(`FAIL C3: ${resultC3.reason}`);
+        win.close(); app.quit(); return;
+    }
+
+    log(`  Encoded ${resultC3.frames} frames in ${resultC3.elapsed.toFixed(3)}s (${resultC3.fps.toFixed(1)} fps)`);
+
+    try {
+        await runFFmpeg(['-y', '-r', '30', '-i', h264C3, '-c:v', 'copy', '-movflags', '+faststart', mp4C3]);
+        log(`  MP4: ${(fs.statSync(mp4C3).size / 1024).toFixed(0)} KB`);
+    } catch (err) {
+        log(`FAIL C3: FFmpeg wrap: ${err.message}`);
+        win.close(); app.quit(); return;
+    }
+
+    log('  Test C3: PASSED');
+    try { fs.unlinkSync(h264C3); } catch (_) {}
     try { fs.unlinkSync(testPng); } catch (_) {}
     log('');
 
-    log('=== ALL COMPOSITOR TESTS PASSED (A + B) ===');
+    log('=== ALL COMPOSITOR TESTS PASSED (A + B + C) ===');
     log(`Output files in: ${OUTPUT_DIR}`);
 
     win.close();

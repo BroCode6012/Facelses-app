@@ -1,13 +1,19 @@
 #include "texture_loader.h"
 #include <wincodec.h>
 #include <cstdio>
+#include <vector>
 
 namespace nativeexporter {
 
-bool loadImageWIC(ID3D11Device* device, const std::string& path, LoadedTexture& out) {
-    out = {};
+// ============================================================================
+// Shared WIC decode helper — decodes image to PBGRA pixel buffer
+// ============================================================================
+static bool decodeToPixels(const std::string& path,
+                           std::vector<BYTE>& outPixels,
+                           uint32_t& outW, uint32_t& outH) {
+    outPixels.clear();
+    outW = outH = 0;
 
-    // Initialize COM (safe to call multiple times)
     CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
     IWICImagingFactory* factory = nullptr;
@@ -19,15 +25,13 @@ bool loadImageWIC(ID3D11Device* device, const std::string& path, LoadedTexture& 
         return false;
     }
 
-    // Convert path to wide string
     int wlen = MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, nullptr, 0);
-    wchar_t* wpath = new wchar_t[wlen];
-    MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, wpath, wlen);
+    std::vector<wchar_t> wpath(wlen);
+    MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, wpath.data(), wlen);
 
     IWICBitmapDecoder* decoder = nullptr;
-    hr = factory->CreateDecoderFromFilename(wpath, nullptr, GENERIC_READ,
+    hr = factory->CreateDecoderFromFilename(wpath.data(), nullptr, GENERIC_READ,
                                             WICDecodeMetadataCacheOnDemand, &decoder);
-    delete[] wpath;
     if (FAILED(hr)) {
         fprintf(stderr, "[TexLoader] CreateDecoder failed for '%s': 0x%08X\n", path.c_str(), (unsigned)hr);
         factory->Release();
@@ -46,7 +50,6 @@ bool loadImageWIC(ID3D11Device* device, const std::string& path, LoadedTexture& 
     UINT imgW = 0, imgH = 0;
     frame->GetSize(&imgW, &imgH);
 
-    // Convert to PBGRA (premultiplied BGRA) — matches D3D11 BGRA format with premul alpha
     IWICFormatConverter* converter = nullptr;
     hr = factory->CreateFormatConverter(&converter);
     if (FAILED(hr)) {
@@ -68,11 +71,11 @@ bool loadImageWIC(ID3D11Device* device, const std::string& path, LoadedTexture& 
         return false;
     }
 
-    // Read pixels
     UINT stride = imgW * 4;
     UINT bufSize = stride * imgH;
-    BYTE* pixels = new BYTE[bufSize];
-    hr = converter->CopyPixels(nullptr, stride, bufSize, pixels);
+    outPixels.resize(bufSize);
+    hr = converter->CopyPixels(nullptr, stride, bufSize, outPixels.data());
+
     converter->Release();
     frame->Release();
     decoder->Release();
@@ -80,11 +83,27 @@ bool loadImageWIC(ID3D11Device* device, const std::string& path, LoadedTexture& 
 
     if (FAILED(hr)) {
         fprintf(stderr, "[TexLoader] CopyPixels failed: 0x%08X\n", (unsigned)hr);
-        delete[] pixels;
+        outPixels.clear();
         return false;
     }
 
-    // Create D3D11 texture
+    outW = imgW;
+    outH = imgH;
+    return true;
+}
+
+// ============================================================================
+// loadImageWIC — create new D3D11 texture + SRV from image file
+// ============================================================================
+bool loadImageWIC(ID3D11Device* device, const std::string& path, LoadedTexture& out) {
+    out = {};
+
+    std::vector<BYTE> pixels;
+    uint32_t imgW, imgH;
+    if (!decodeToPixels(path, pixels, imgW, imgH)) return false;
+
+    UINT stride = imgW * 4;
+
     D3D11_TEXTURE2D_DESC desc = {};
     desc.Width = imgW;
     desc.Height = imgH;
@@ -96,19 +115,16 @@ bool loadImageWIC(ID3D11Device* device, const std::string& path, LoadedTexture& 
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
     D3D11_SUBRESOURCE_DATA initData = {};
-    initData.pSysMem = pixels;
+    initData.pSysMem = pixels.data();
     initData.SysMemPitch = stride;
 
     ID3D11Texture2D* tex = nullptr;
-    hr = device->CreateTexture2D(&desc, &initData, &tex);
-    delete[] pixels;
-
+    HRESULT hr = device->CreateTexture2D(&desc, &initData, &tex);
     if (FAILED(hr)) {
         fprintf(stderr, "[TexLoader] CreateTexture2D failed: 0x%08X\n", (unsigned)hr);
         return false;
     }
 
-    // Create SRV
     ID3D11ShaderResourceView* srv = nullptr;
     hr = device->CreateShaderResourceView(tex, nullptr, &srv);
     if (FAILED(hr)) {
@@ -127,6 +143,29 @@ bool loadImageWIC(ID3D11Device* device, const std::string& path, LoadedTexture& 
     return true;
 }
 
+// ============================================================================
+// updateTextureWIC — update existing DEFAULT texture with new image data
+// ============================================================================
+bool updateTextureWIC(ID3D11DeviceContext* ctx, const std::string& path,
+                      ID3D11Texture2D* texture, uint32_t expectedW, uint32_t expectedH) {
+    if (!ctx || !texture) return false;
+
+    std::vector<BYTE> pixels;
+    uint32_t imgW, imgH;
+    if (!decodeToPixels(path, pixels, imgW, imgH)) return false;
+
+    if (imgW != expectedW || imgH != expectedH) {
+        fprintf(stderr, "[TexLoader] updateTextureWIC: size mismatch %ux%u vs expected %ux%u for '%s'\n",
+                imgW, imgH, expectedW, expectedH, path.c_str());
+        return false;
+    }
+
+    UINT stride = imgW * 4;
+    ctx->UpdateSubresource(texture, 0, nullptr, pixels.data(), stride, 0);
+    return true;
+}
+
+// ============================================================================
 void releaseTexture(LoadedTexture& tex) {
     if (tex.srv) { tex.srv->Release(); tex.srv = nullptr; }
     if (tex.texture) { tex.texture->Release(); tex.texture = nullptr; }
